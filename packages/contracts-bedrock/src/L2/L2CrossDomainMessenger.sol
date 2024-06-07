@@ -10,16 +10,20 @@ import { L2ToL1MessagePasser } from "src/L2/L2ToL1MessagePasser.sol";
 import { Constants } from "src/libraries/Constants.sol";
 import { L1Block } from "src/L2/L1Block.sol";
 import { Predeploys } from "src/libraries/Predeploys.sol";
-
+import { SafeStaticCall } from "src/libraries/SafeStaticCall.sol";
 /// @custom:proxied
 /// @custom:predeploy 0x4200000000000000000000000000000000000007
 /// @title L2CrossDomainMessenger
 /// @notice The L2CrossDomainMessenger is a high-level interface for message passing between L1 and
 ///         L2 on the L2 side. Users are generally encouraged to use this contract instead of lower
 ///         level message passing contracts.
+
 contract L2CrossDomainMessenger is CrossDomainMessenger, ISemver {
     /// @custom:semver 2.1.0
     string public constant version = "2.1.0";
+
+    /// @notice Gas reserved for checking the message validation configuration.
+    uint64 public constant SEND_MESSAGE_VALIDATION_OVERHEAD = 50;
 
     /// @notice Constructs the L2CrossDomainMessenger contract.
     constructor() CrossDomainMessenger() {
@@ -52,27 +56,13 @@ contract L2CrossDomainMessenger is CrossDomainMessenger, ISemver {
         (addr_, decimals_) = L1Block(Predeploys.L1_BLOCK_ATTRIBUTES).gasPayingToken();
     }
 
+    function isL2Domain() internal pure override returns (bool) {
+        return true;
+    }
+
     /// @inheritdoc CrossDomainMessenger
-    function passesDomainMessageValidator(
-        uint256 _nonce,
-        address _sender,
-        address _target,
-        uint256 _value,
-        uint256 _minGasLimit,
-        bytes calldata _message
-    )
-        internal
-        view
-        override
-        returns (bool)
-    {
-        address l2MessageValidator = L1Block(Predeploys.L1_BLOCK_ATTRIBUTES).l2MessageValidator();
-        if (l2MessageValidator == address(0)) {
-            return true;
-        }
-        return IL2MessageValidator(l2MessageValidator).validateMessage(
-            _nonce, _sender, _target, _value, _minGasLimit, _message
-        );
+    function sendMessageValidationGas() internal pure override returns (uint64) {
+        return SEND_MESSAGE_VALIDATION_OVERHEAD;
     }
 
     /// @inheritdoc CrossDomainMessenger

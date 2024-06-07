@@ -3,6 +3,7 @@ pragma solidity 0.8.15;
 
 import { Initializable } from "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
 import { SafeCall } from "src/libraries/SafeCall.sol";
+import { SafeStaticCall } from "src/libraries/SafeStaticCall.sol";
 import { Hashing } from "src/libraries/Hashing.sol";
 import { Encoding } from "src/libraries/Encoding.sol";
 import { Constants } from "src/libraries/Constants.sol";
@@ -111,8 +112,14 @@ abstract contract CrossDomainMessenger is
     uint64 public constant RELAY_RESERVED_GAS = 40_000;
 
     /// @notice Gas reserved for the execution between the `hasMinGas` check and the external
-    ///         call in `relayMessage`.
+    ///         call in `relayMessage`. Does not include message validation calls.
     uint64 public constant RELAY_GAS_CHECK_BUFFER = 5_000;
+
+    /// @notice Gas reserved for checking the message validation configuration.
+    uint64 public constant RELAY_MESSAGE_VALIDATION_CONFIG_OVERHEAD = 5_000;
+
+    /// @notice Gas reserved for static calling the message validation configured address.
+    uint64 public constant RELAY_MESSAGE_VALIDATION_OVERHEAD = 80_000;
 
     /// @notice Mapping of message hashes to boolean receipt values. Note that a message will only
     ///         be present in this mapping if it has successfully been relayed on this chain, and
@@ -184,7 +191,7 @@ abstract contract CrossDomainMessenger is
         // the minimum gas limit specified by the user.
         _sendMessage({
             _to: address(otherMessenger),
-            _gasLimit: baseGas(_message, _minGasLimit),
+            _gasLimit: baseGas(_message, _minGasLimit, sendMessageValidationGas()),
             _value: msg.value,
             _data: abi.encodeWithSelector(
                 this.relayMessage.selector, messageNonce(), msg.sender, _target, msg.value, _minGasLimit, _message
@@ -264,29 +271,46 @@ abstract contract CrossDomainMessenger is
         //
         // If `xDomainMsgSender` is not the default L2 sender, this function
         // is being re-entered. This marks the message as failed to allow it to be replayed.
-        //
-        // During forced L1 -> L2 messages we check to make sure any (additional) message validation
-        // is passed. On L1, this MUST always return true without additional checks. On L2, this may
-        // perform additional checks through the L2MessageValidator.
-        // TODO: add min gas checking functionality
+        bool forcedL1L2Message = isL2Domain() && _isOtherMessenger();
+        uint64 validationConfigGas = forcedL1L2Message ? RELAY_MESSAGE_VALIDATION_CONFIG_OVERHEAD : 0;
         if (
-            !SafeCall.hasMinGas(_minGasLimit, RELAY_RESERVED_GAS + RELAY_GAS_CHECK_BUFFER)
+            !SafeCall.hasMinGas(_minGasLimit, RELAY_RESERVED_GAS + RELAY_GAS_CHECK_BUFFER + validationConfigGas)
                 || xDomainMsgSender != Constants.DEFAULT_L2_SENDER
-                || !passesDomainMessageValidator(_nonce, _sender, _target, _value, _minGasLimit, _message)
         ) {
-            failedMessages[versionedHash] = true;
-            emit FailedRelayedMessage(versionedHash);
+            return failMessage(versionedHash);
+        }
 
-            // Revert in this case if the transaction was triggered by the estimation address. This
-            // should only be possible during gas estimation or we have bigger problems. Reverting
-            // here will make the behavior of gas estimation change such that the gas limit
-            // computed will be the amount required to relay the message, even if that amount is
-            // greater than the minimum gas limit specified by the user.
-            if (tx.origin == Constants.ESTIMATION_ADDRESS) {
-                revert("CrossDomainMessenger: failed to relay message");
+        // During forced L1 -> L2 messages we check to make sure any (optional) message validation
+        // is passed. The checks until we reach the next
+        if (forcedL1L2Message) {
+            address messageValidator = getRelayMessageValidator();
+            if (messageValidator != address(0)) {
+                // check that we have enough gas to static call the message validator
+                if (
+                    !SafeCall.hasMinGas(
+                        _minGasLimit, RELAY_RESERVED_GAS + RELAY_GAS_CHECK_BUFFER + RELAY_MESSAGE_VALIDATION_OVERHEAD
+                    )
+                ) {
+                    return failMessage(versionedHash);
+                }
+                // check that the message passes validation
+                bytes memory _calldata = abi.encodeWithSignature(
+                    "validateMessage(uint256,address,address,uint256,uint256,bytes)",
+                    _nonce,
+                    _sender,
+                    _target,
+                    _value,
+                    _minGasLimit,
+                    _message
+                );
+                (bool staticCallsuccess, bytes memory returnData) = SafeStaticCall.excessivelySafeStaticCall(
+                    messageValidator, RELAY_MESSAGE_VALIDATION_OVERHEAD, 1, _calldata
+                );
+                bool passesValidation = abi.decode(returnData, (bool));
+                if (!staticCallsuccess || !passesValidation) {
+                    return failMessage(versionedHash);
+                }
             }
-
-            return;
         }
 
         xDomainMsgSender = _sender;
@@ -300,17 +324,21 @@ abstract contract CrossDomainMessenger is
             successfulMessages[versionedHash] = true;
             emit RelayedMessage(versionedHash);
         } else {
-            failedMessages[versionedHash] = true;
-            emit FailedRelayedMessage(versionedHash);
+            failMessage(versionedHash);
+        }
+    }
 
-            // Revert in this case if the transaction was triggered by the estimation address. This
-            // should only be possible during gas estimation or we have bigger problems. Reverting
-            // here will make the behavior of gas estimation change such that the gas limit
-            // computed will be the amount required to relay the message, even if that amount is
-            // greater than the minimum gas limit specified by the user.
-            if (tx.origin == Constants.ESTIMATION_ADDRESS) {
-                revert("CrossDomainMessenger: failed to relay message");
-            }
+    function failMessage(bytes32 versionedHash) internal {
+        failedMessages[versionedHash] = true;
+        emit FailedRelayedMessage(versionedHash);
+
+        // Revert in this case if the transaction was triggered by the estimation address. This
+        // should only be possible during gas estimation or we have bigger problems. Reverting
+        // here will make the behavior of gas estimation change such that the gas limit
+        // computed will be the amount required to relay the message, even if that amount is
+        // greater than the minimum gas limit specified by the user.
+        if (tx.origin == Constants.ESTIMATION_ADDRESS) {
+            revert("CrossDomainMessenger: failed to relay message");
         }
     }
 
@@ -346,10 +374,19 @@ abstract contract CrossDomainMessenger is
     ///         received on the other chain without running out of gas. Guaranteeing that a message
     ///         will not run out of gas is important because this ensures that a message can always
     ///         be replayed on the other chain if it fails to execute completely.
-    /// @param _message     Message to compute the amount of required gas for.
-    /// @param _minGasLimit Minimum desired gas limit when message goes to target.
+    /// @param _message       Message to compute the amount of required gas for.
+    /// @param _minGasLimit   Minimum desired gas limit when message goes to target.
+    /// @param _validationGas Extra gas used for message validation.
     /// @return Amount of gas required to guarantee message receipt.
-    function baseGas(bytes calldata _message, uint32 _minGasLimit) public pure returns (uint64) {
+    function baseGas(
+        bytes calldata _message,
+        uint32 _minGasLimit,
+        uint64 _validationGas
+    )
+        public
+        pure
+        returns (uint64)
+    {
         return
         // Constant overhead
         RELAY_CONSTANT_OVERHEAD
@@ -365,7 +402,9 @@ abstract contract CrossDomainMessenger is
         + RELAY_RESERVED_GAS
         // Gas reserved for the execution between the `hasMinGas` check and the `CALL`
         // opcode. (Conservative)
-        + RELAY_GAS_CHECK_BUFFER;
+        + RELAY_GAS_CHECK_BUFFER
+        // Gas reserved for message validation.
+        + _validationGas;
     }
 
     /// @notice Returns the address of the gas token and the token's decimals.
@@ -377,22 +416,19 @@ abstract contract CrossDomainMessenger is
         return token != Constants.ETHER;
     }
 
-    /// @notice Returns whether or not the additional message validator passes for a given message.
-    ///         On L1, this should always be true.
-    ///         On L2, forced L1 -> L2 messages may go through additional validation if enabled
-    ///         by the system config.
-    function passesDomainMessageValidator(
-        uint256 _nonce,
-        address _sender,
-        address _target,
-        uint256 _value,
-        uint256 _minGasLimit,
-        bytes calldata _message
-    )
-        internal
-        view
-        virtual
-        returns (bool);
+    /// @notice TODO
+    function isL2Domain() internal pure virtual returns (bool);
+
+    /// @notice TODO
+    function sendMessageValidationGas() internal view virtual returns (uint64);
+
+    /// @notice Returns the message validator address. The zero address means message validation
+    ///         is turned off.
+    ///         On L1, this MUST always return address(0).
+    ///         On L2, this CAN return a non-zero address.
+    function getRelayMessageValidator() internal view virtual returns (address) {
+        return address(0);
+    }
 
     /// @notice Initializer.
     /// @param _otherMessenger CrossDomainMessenger contract on the other chain.
