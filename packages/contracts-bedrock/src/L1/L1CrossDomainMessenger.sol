@@ -61,9 +61,8 @@ contract L1CrossDomainMessenger is CrossDomainMessenger, ISemver {
     }
 
     /// @inheritdoc CrossDomainMessenger
-    function _xDomainRelayMessageValidationGas(uint64 _messageLength) internal view override returns (uint64) {
-        address l2MessageValidator = systemConfig.l2MessageValidator();
-        return RELAY_MESSAGE_VALIDATOR_CONFIG_CALL_GAS + _relayMessageValidatorGas(l2MessageValidator, _messageLength);
+    function _xDomainRelayMessageForceReplayConfigGas() internal pure override returns (uint64) {
+        return RELAY_MESSAGE_FORCE_REPLAY_CONFIG_CALL_GAS;
     }
 
     /// @notice Getter function for the OptimismPortal contract on this chain.

@@ -8,16 +8,14 @@ import { Storage } from "src/libraries/Storage.sol";
 import { Constants } from "src/libraries/Constants.sol";
 import { OptimismPortal } from "src/L1/OptimismPortal.sol";
 import { GasPayingToken, IGasToken } from "src/libraries/GasPayingToken.sol";
-import {
-    AdditionalMessageValidators, IAdditionalMessageValidators
-} from "src/libraries/AdditionalMessageValidators.sol";
+import { ForceReplayL1L2Messages, IForceReplayConfig, IOtherMessenger } from "src/libraries/ForceReplayL1L2Messages.sol";
 import { ERC20 } from "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 
 /// @title SystemConfig
 /// @notice The SystemConfig contract is used to manage configuration of an Optimism network.
 ///         All configuration is stored on L1 and picked up by L2 as part of the derviation of
 ///         the L2 chain.
-contract SystemConfig is OwnableUpgradeable, ISemver, IGasToken, IAdditionalMessageValidators {
+contract SystemConfig is OwnableUpgradeable, ISemver, IGasToken, IForceReplayConfig {
     /// @notice Enum representing different types of updates.
     /// @custom:value BATCHER              Represents an update to the batcher hash.
     /// @custom:value GAS_CONFIG           Represents an update to txn fee config on L2.
@@ -42,8 +40,6 @@ contract SystemConfig is OwnableUpgradeable, ISemver, IGasToken, IAdditionalMess
         address optimismPortal;
         address optimismMintableERC20Factory;
         address gasPayingToken;
-        address l1MessageValidator;
-        address l2MessageValidator;
     }
 
     /// @notice Version identifier, used for upgrades.
@@ -164,10 +160,9 @@ contract SystemConfig is OwnableUpgradeable, ISemver, IGasToken, IAdditionalMess
                 disputeGameFactory: address(0),
                 optimismPortal: address(0),
                 optimismMintableERC20Factory: address(0),
-                gasPayingToken: address(0),
-                l1MessageValidator: address(0),
-                l2MessageValidator: address(0)
-            })
+                gasPayingToken: address(0)
+            }),
+            _forceReplayL1L2Messages: false
         });
     }
 
@@ -183,6 +178,7 @@ contract SystemConfig is OwnableUpgradeable, ISemver, IGasToken, IAdditionalMess
     /// @param _batchInbox        Batch inbox address. An identifier for the op-node to find
     ///                           canonical data.
     /// @param _addresses         Set of L1 contract addresses. These should be the proxies.
+    /// @param _forceReplayL1L2Messages Initial force replay value.
     function initialize(
         address _owner,
         uint32 _basefeeScalar,
@@ -192,7 +188,8 @@ contract SystemConfig is OwnableUpgradeable, ISemver, IGasToken, IAdditionalMess
         address _unsafeBlockSigner,
         ResourceMetering.ResourceConfig memory _config,
         address _batchInbox,
-        SystemConfig.Addresses memory _addresses
+        SystemConfig.Addresses memory _addresses,
+        bool _forceReplayL1L2Messages
     )
         public
         initializer
@@ -216,7 +213,7 @@ contract SystemConfig is OwnableUpgradeable, ISemver, IGasToken, IAdditionalMess
 
         _setStartBlock();
         _setGasPayingToken(_addresses.gasPayingToken);
-        _setMessageValidators(_addresses.l1MessageValidator, _addresses.l2MessageValidator);
+        _setForceReplay(_forceReplayL1L2Messages);
         _setResourceConfig(_config);
         require(_gasLimit >= minimumGasLimit(), "SystemConfig: gas limit too low");
     }
@@ -309,44 +306,29 @@ contract SystemConfig is OwnableUpgradeable, ISemver, IGasToken, IAdditionalMess
         symbol_ = GasPayingToken.getSymbol();
     }
 
-    /// @notice Returns the L1MessageValidator address called from the OptimismPortal.
-    ///         If nothing is set in state, then it means there is no additional message
-    ///         message validation being used.
-    function l1MessageValidator() public view returns (address addr_) {
-        addr_ = AdditionalMessageValidators.getL1MessageValidator();
+    /// @notice to-do
+    function crossDomainMessengers() public view returns (address l1Messenger_, address l2Messenger_) {
+        l1Messenger_ = Storage.getAddress(L1_CROSS_DOMAIN_MESSENGER_SLOT);
+        l2Messenger_ = IOtherMessenger(l1Messenger_).otherMessenger();
     }
 
-    /// @notice Returns the L2MessageValidator address called from the L2CrossDomainMessenger.
-    ///         If nothing is set in state, then it means there is no additional message
-    ///         message validation being used.
-    function l2MessageValidator() public view returns (address addr_) {
-        addr_ = AdditionalMessageValidators.getL2MessageValidator();
+    /// @notice to-do
+    function isForcingReplay() public view returns (bool) {
+        return ForceReplayL1L2Messages.getForceReplayL1L2Messages();
     }
 
-    /// @notice Returns a bool indicating if the network is using additional
-    ///         message validators on either L1 or L2.
-    function isAdditionalMessageValidating() public view returns (bool) {
-        bool l1MessageValidatorSet = l1MessageValidator() != address(0);
-        bool l2MessageValidatorSet = l2MessageValidator() != address(0);
-        return l1MessageValidatorSet || l2MessageValidatorSet;
+    /// @notice to-do
+    /// @param _forceReplay to-do
+    function setForceReplay(bool _forceReplay) external onlyOwner {
+        _setForceReplay(_forceReplay);
     }
 
-    /// @notice Setter for additional message validators. Can only be called by the owner.
-    /// @param _l1MessageValidator Address static called in the OptimismPortal for additional message validation.
-    /// @param _l2MessageValidator Address static called in the L2CrossDomainMessenger for additional message
-    /// validation.
-    function setMessageValidators(address _l1MessageValidator, address _l2MessageValidator) external onlyOwner {
-        _setMessageValidators(_l1MessageValidator, _l2MessageValidator);
-    }
-
-    /// @notice Internal setter for additional message validators.
-    /// @param _l1MessageValidator Address static called in the OptimismPortal for additional message validation.
-    /// @param _l2MessageValidator Address static called in the L2CrossDomainMessenger for additional message
-    /// validation.
-    function _setMessageValidators(address _l1MessageValidator, address _l2MessageValidator) internal virtual {
+    /// @notice Internal setter to-do
+    /// @param _forceReplay to-do
+    function _setForceReplay(bool _forceReplay) internal virtual {
         // Set the message validators in storage and in the OptimismPortal.
-        AdditionalMessageValidators.set(_l1MessageValidator, _l2MessageValidator);
-        OptimismPortal(payable(optimismPortal())).setMessageValidators(_l1MessageValidator, _l2MessageValidator);
+        ForceReplayL1L2Messages.set(_forceReplay);
+        OptimismPortal(payable(optimismPortal())).setForceReplay(_forceReplay);
     }
 
     /// @notice Internal setter for the gas paying token address, includes validation.

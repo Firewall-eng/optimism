@@ -6,7 +6,6 @@ import { SafeCall } from "src/libraries/SafeCall.sol";
 import { L2OutputOracle } from "src/L1/L2OutputOracle.sol";
 import { SystemConfig } from "src/L1/SystemConfig.sol";
 import { SuperchainConfig } from "src/L1/SuperchainConfig.sol";
-import { IL1MessageValidator } from "src/L1/IL1MessageValidator.sol";
 import { Constants } from "src/libraries/Constants.sol";
 import { Types } from "src/libraries/Types.sol";
 import { Hashing } from "src/libraries/Hashing.sol";
@@ -219,9 +218,14 @@ contract OptimismPortal is Initializable, ResourceMetering, ISemver {
         (addr_, decimals_) = systemConfig.gasPayingToken();
     }
 
-    /// @notice Returns the address of the (optional) L1MessageValidator.
-    function l1MessageValidator() internal view returns (address addr_) {
-        addr_ = systemConfig.l1MessageValidator();
+    /// @notice to-do
+    function isForcingReplay() internal view returns (bool) {
+        return systemConfig.isForcingReplay();
+    }
+
+    /// @notice to-do
+    function crossDomainMessengers() internal view returns (address l1Messenger_, address l2Messenger_) {
+        return systemConfig.crossDomainMessengers();
     }
 
     /// @notice Getter for the resource config.
@@ -548,16 +552,11 @@ contract OptimismPortal is Initializable, ResourceMetering, ISemver {
         // transactions are not gossipped over the p2p network.
         if (_data.length > 120_000) revert LargeCalldata();
 
-        // Check the L1MessageValidator if it is enabled
-        address messageValidator = l1MessageValidator();
-        if (messageValidator != address(0)) {
-            if (
-                !IL1MessageValidator(messageValidator).validateMessage(
-                    msg.sender, _to, _mint, _value, _gasLimit, _isCreation, _data
-                )
-            ) {
-                revert InvalidDeposit();
-            }
+        // Check if the we need to enforce forced replayability through the cross domain messengers
+        if (isForcingReplay() && !(msg.sender == tx.origin && msg.sender == _to)) {
+            (address l1Messenger, address l2Messenger) = crossDomainMessengers();
+            require(msg.sender == l1Messenger);
+            require(_to == l2Messenger);
         }
 
         // Transform the from-address to its alias if the caller is a contract.
@@ -578,7 +577,7 @@ contract OptimismPortal is Initializable, ResourceMetering, ISemver {
 
     /// @notice Sets additional message validators for the L2 system. Only the SystemConfig contract
     ///         can call this function.
-    function setMessageValidators(address _l1MessageValidator, address _l2MessageValidator) external {
+    function setForceReplay(bool _forceReplay) external {
         if (msg.sender != address(systemConfig)) revert Unauthorized();
 
         // Set L2 deposit gas as used without paying burning gas. Ensures that deposits cannot use too much L2 gas.
@@ -596,7 +595,7 @@ contract OptimismPortal is Initializable, ResourceMetering, ISemver {
                 uint256(0), // value
                 uint64(SYSTEM_DEPOSIT_GAS_LIMIT), // gasLimit
                 false, // isCreation,
-                abi.encodeCall(L1Block.setMessageValidators, (_l1MessageValidator, _l2MessageValidator))
+                abi.encodeCall(L1Block.setForceReplay, (_forceReplay))
             )
         );
     }
