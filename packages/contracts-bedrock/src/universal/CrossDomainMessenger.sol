@@ -111,7 +111,7 @@ abstract contract CrossDomainMessenger is
     uint64 public constant RELAY_RESERVED_GAS = 40_000;
 
     /// @notice Gas reserved for the execution between the `hasMinGas` check and the external
-    ///         call in `relayMessage`. Does not include `relayMessage` validator config check.
+    ///         call in `relayMessage`.
     uint64 public constant RELAY_GAS_CHECK_BUFFER = 5_000;
 
     /// @notice to-do
@@ -271,7 +271,7 @@ abstract contract CrossDomainMessenger is
         // If there is not enough gas left to perform the external call and finish the execution,
         // return early and assign the message to the failedMessages mapping.
         // We are asserting that we have enough gas to:
-        // 1. Call the target contract (_minGasLimit + RELAY_CALL_OVERHEAD + RELAY_GAS_CHECK_BUFFER
+        // 1. Call the target contract (_minGasLimit + RELAY_CALL_OVERHEAD + RELAY_GAS_CHECK_BUFFER)
         //   1.a. The RELAY_CALL_OVERHEAD is included in `hasMinGas`.
         // 2. Finish the execution after the external call (RELAY_RESERVED_GAS).
         //
