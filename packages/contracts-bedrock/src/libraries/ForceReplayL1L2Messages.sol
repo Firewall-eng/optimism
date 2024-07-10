@@ -4,7 +4,7 @@ pragma solidity ^0.8.0;
 import { Storage } from "src/libraries/Storage.sol";
 
 interface IOtherMessenger {
-    /// @notice to-do
+    /// @notice Getter for the address of the messenger on the other domain.
     function otherMessenger() external view returns (address);
 }
 
@@ -16,7 +16,7 @@ interface IForceReplayConfig {
 }
 
 /// @title ForceReplayL1L2Messages
-/// @notice to-do
+/// @notice Handles reading and writing the force replay boolean value to storage.
 library ForceReplayL1L2Messages {
     /// @notice The storage slot that contains the boolean for forceReplayL1L2Messages
     bytes32 internal constant FORCE_REPLAY_L1_L2_MESSAGES =
@@ -27,7 +27,7 @@ library ForceReplayL1L2Messages {
         return Storage.getBool(FORCE_REPLAY_L1_L2_MESSAGES);
     }
 
-    /// @notice to-do
+    /// @notice Internal setter for the force replay boolean value.
     function set(bool _forceReplay) internal {
         Storage.setBool(FORCE_REPLAY_L1_L2_MESSAGES, _forceReplay);
     }

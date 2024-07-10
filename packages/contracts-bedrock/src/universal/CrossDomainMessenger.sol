@@ -114,10 +114,11 @@ abstract contract CrossDomainMessenger is
     ///         call in `relayMessage`.
     uint64 public constant RELAY_GAS_CHECK_BUFFER = 5_000;
 
-    /// @notice to-do
+    /// @notice Gas reserved for the hardcoded if statement when we skip checking the force replay
+    ///         config value.
     uint64 public constant RELAY_MESSAGE_FORCE_REPLAY_CONFIG_NOOP_GAS = 50;
 
-    /// @notice to-do
+    /// @notice Gas reserved for static calling the force replay config value.
     uint64 public constant RELAY_MESSAGE_FORCE_REPLAY_CONFIG_CALL_GAS = 6_000;
 
     /// @notice Mapping of message hashes to boolean receipt values. Note that a message will only
@@ -386,7 +387,8 @@ abstract contract CrossDomainMessenger is
         return token != Constants.ETHER;
     }
 
-    /// @notice to-do
+    /// @notice Internal getter that returns the amount of gas reserved for checking the force
+    ///         replay config value on the other (x) domain.
     /// @return Gas reserved for calling the L1Block for forced replay check on the other domain.
     function _xDomainRelayMessageForceReplayConfigGas() internal pure virtual returns (uint64);
 

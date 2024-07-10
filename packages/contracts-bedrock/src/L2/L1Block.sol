@@ -66,7 +66,8 @@ contract L1Block is ISemver, IGasToken, IForceReplayConfig {
         return "1.4.1-beta.1";
     }
 
-    /// @notice to-do
+    /// @notice Getter for the force replay boolean value. If nothing is in state, then it means
+    ///         forcing replay is off.
     function isForcingReplay() public view returns (bool) {
         return ForceReplayL1L2Messages.getForceReplayL1L2Messages();
     }
@@ -172,8 +173,9 @@ contract L1Block is ISemver, IGasToken, IForceReplayConfig {
         emit GasPayingTokenSet({ token: _token, decimals: _decimals, name: _name, symbol: _symbol });
     }
 
-    /// @notice to-do
-    /// @param _forceReplay to-do
+    /// @notice External setter for the force replay boolean value. Can only be called
+    ///         by the system depositor account.
+    /// @param _forceReplay The force replay boolean value to set.
     function setForceReplay(bool _forceReplay) external {
         if (msg.sender != DEPOSITOR_ACCOUNT()) revert NotDepositor();
 

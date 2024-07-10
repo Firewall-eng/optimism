@@ -306,25 +306,26 @@ contract SystemConfig is OwnableUpgradeable, ISemver, IGasToken, IForceReplayCon
         symbol_ = GasPayingToken.getSymbol();
     }
 
-    /// @notice to-do
+    /// @notice Getter for the L1CrossDomainMessenger and the L2CrossDomainMessenger addresses.
     function crossDomainMessengers() public view returns (address l1Messenger_, address l2Messenger_) {
         l1Messenger_ = Storage.getAddress(L1_CROSS_DOMAIN_MESSENGER_SLOT);
         l2Messenger_ = IOtherMessenger(l1Messenger_).otherMessenger();
     }
 
-    /// @notice to-do
+    /// @notice Getter for the force replay boolean value.
     function isForcingReplay() public view returns (bool) {
         return ForceReplayL1L2Messages.getForceReplayL1L2Messages();
     }
 
-    /// @notice to-do
-    /// @param _forceReplay to-do
+    /// @notice External setter for the force replay boolean value. Can only be called
+    ///         by the owner.
+    /// @param _forceReplay Boolean value for the force replay configuration.
     function setForceReplay(bool _forceReplay) external onlyOwner {
         _setForceReplay(_forceReplay);
     }
 
-    /// @notice Internal setter to-do
-    /// @param _forceReplay to-do
+    /// @notice Internal setter for the force replay boolean value.
+    /// @param _forceReplay Boolean value for the force replay configuration.
     function _setForceReplay(bool _forceReplay) internal virtual {
         // Set the force replay in storage and in the OptimismPortal.
         ForceReplayL1L2Messages.set(_forceReplay);

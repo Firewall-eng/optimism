@@ -218,12 +218,12 @@ contract OptimismPortal is Initializable, ResourceMetering, ISemver {
         (addr_, decimals_) = systemConfig.gasPayingToken();
     }
 
-    /// @notice to-do
+    /// @notice Returns the force replay boolean value.
     function isForcingReplay() internal view returns (bool) {
         return systemConfig.isForcingReplay();
     }
 
-    /// @notice to-do
+    /// @notice Returns the address of the L1CrossDomainMessenger and the L2CrossDomainMessenger.
     function crossDomainMessengers() internal view returns (address l1Messenger_, address l2Messenger_) {
         return systemConfig.crossDomainMessengers();
     }
