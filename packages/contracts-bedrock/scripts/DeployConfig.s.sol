@@ -81,6 +81,9 @@ contract DeployConfig is Script {
 
     bool public useInterop;
 
+    bool public forceReplay;
+    address public forceReplayFaultProver;
+
     function read(string memory _path) public {
         console.log("DeployConfig: reading file %s", _path);
         try vm.readFile(_path) returns (string memory data) {
@@ -159,6 +162,9 @@ contract DeployConfig is Script {
         customGasTokenAddress = _readOr(_json, "$.customGasTokenAddress", address(0));
 
         useInterop = _readOr(_json, "$.useInterop", false);
+
+        forceReplay = _readOr(_json, "$.forceReplay", false);
+        forceReplayFaultProver = _readOr(_json, "$.forceReplayFaultProver", address(0));
     }
 
     function l1StartingBlockTag() public returns (bytes32) {
@@ -213,6 +219,16 @@ contract DeployConfig is Script {
     function setUseCustomGasToken(address _token) public {
         useCustomGasToken = true;
         customGasTokenAddress = _token;
+    }
+
+    /// @notice Allow the `forceReplay` config to be overridden in testing environments
+    function setForceReplay(bool _forceReplay) public {
+        forceReplay = _forceReplay;
+    }
+
+    /// @notice Allow the `forceReplayFaultProver` config to be overridden in testing environments
+    function setForceReplayFaultProver(address _forceReplayFaultProver) public {
+        forceReplayFaultProver = _forceReplayFaultProver;
     }
 
     function _getBlockByTag(string memory _tag) internal returns (bytes32) {

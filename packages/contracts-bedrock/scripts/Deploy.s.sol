@@ -1032,7 +1032,8 @@ contract Deploy is Deployer {
                         optimismMintableERC20Factory: mustGetAddress("OptimismMintableERC20FactoryProxy"),
                         gasPayingToken: customGasTokenAddress
                     }),
-                    false
+                    cfg.forceReplay(),
+                    cfg.forceReplayFaultProver()
                 )
             )
         });

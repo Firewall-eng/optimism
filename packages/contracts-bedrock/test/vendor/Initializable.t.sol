@@ -186,10 +186,10 @@ contract Initializer_Test is Bridge_Initializer {
                             disputeGameFactory: address(0),
                             optimismPortal: address(0),
                             optimismMintableERC20Factory: address(0),
-                            gasPayingToken: Constants.ETHER,
-                            l1MessageValidator: address(0),
-                            l2MessageValidator: address(0)
-                        })
+                            gasPayingToken: Constants.ETHER
+                        }),
+                        false,
+                        address(0)
                     )
                 ),
                 initializedSlotVal: deploy.loadInitializedSlot("SystemConfig")
@@ -224,10 +224,10 @@ contract Initializer_Test is Bridge_Initializer {
                             disputeGameFactory: address(0),
                             optimismPortal: address(0),
                             optimismMintableERC20Factory: address(0),
-                            gasPayingToken: Constants.ETHER,
-                            l1MessageValidator: address(0),
-                            l2MessageValidator: address(0)
-                        })
+                            gasPayingToken: Constants.ETHER
+                        }),
+                        false,
+                        address(0)
                     )
                 ),
                 initializedSlotVal: deploy.loadInitializedSlot("SystemConfigProxy")

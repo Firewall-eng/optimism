@@ -34,10 +34,10 @@ contract SystemConfig_GasLimitBoundaries_Invariant is Test {
                         disputeGameFactory: address(0),
                         optimismPortal: address(0),
                         optimismMintableERC20Factory: address(0),
-                        gasPayingToken: Constants.ETHER,
-                        l1MessageValidator: address(0),
-                        l2MessageValidator: address(0)
-                    })
+                        gasPayingToken: Constants.ETHER
+                    }),
+                    false, // force replay
+                    address(0) // force replay fault prover
                 )
             )
         );
