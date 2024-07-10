@@ -326,7 +326,7 @@ contract SystemConfig is OwnableUpgradeable, ISemver, IGasToken, IForceReplayCon
     /// @notice Internal setter to-do
     /// @param _forceReplay to-do
     function _setForceReplay(bool _forceReplay) internal virtual {
-        // Set the message validators in storage and in the OptimismPortal.
+        // Set the force replay in storage and in the OptimismPortal.
         ForceReplayL1L2Messages.set(_forceReplay);
         OptimismPortal(payable(optimismPortal())).setForceReplay(_forceReplay);
     }
