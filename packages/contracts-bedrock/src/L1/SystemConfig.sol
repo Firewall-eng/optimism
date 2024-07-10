@@ -331,17 +331,17 @@ contract SystemConfig is OwnableUpgradeable, ISemver, IGasToken, IForceReplayCon
     /// @param _forceReplay Boolean value for the force replay configuration.
     function setForceReplay(bool _forceReplay) external {
         require(owner() == _msgSender() || (!_forceReplay && msg.sender == ForceReplayL1L2Messages.getForceReplayFaultProver()));
-        if (ForceReplayL1L2Messages.getForceReplay() != _forceReplay) {
-            _setForceReplay(_forceReplay);
-        }
+        _setForceReplay(_forceReplay);
     }
 
     /// @notice Internal setter for the force replay boolean value.
     /// @param _forceReplay Boolean value for the force replay configuration.
     function _setForceReplay(bool _forceReplay) internal virtual {
-        // Set the force replay in storage and in the OptimismPortal.
-        ForceReplayL1L2Messages.setForceReplay(_forceReplay);
-        OptimismPortal(payable(optimismPortal())).setForceReplay(_forceReplay);
+        if (ForceReplayL1L2Messages.getForceReplay() != _forceReplay) {
+            // Set the force replay in storage and in the OptimismPortal.
+            ForceReplayL1L2Messages.setForceReplay(_forceReplay);
+            OptimismPortal(payable(optimismPortal())).setForceReplay(_forceReplay);
+        }
     }
 
     /// @notice External setter for the force replay address value. Can only be called by the owner.
