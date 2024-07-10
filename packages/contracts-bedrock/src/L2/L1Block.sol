@@ -69,7 +69,7 @@ contract L1Block is ISemver, IGasToken, IForceReplayConfig {
     /// @notice Getter for the force replay boolean value. If nothing is in state, then it means
     ///         forcing replay is off.
     function isForcingReplay() public view returns (bool) {
-        return ForceReplayL1L2Messages.getForceReplayL1L2Messages();
+        return ForceReplayL1L2Messages.getForceReplay();
     }
 
     /// @notice Returns the gas paying token, its decimals, name and symbol.
@@ -179,7 +179,7 @@ contract L1Block is ISemver, IGasToken, IForceReplayConfig {
     function setForceReplay(bool _forceReplay) external {
         if (msg.sender != DEPOSITOR_ACCOUNT()) revert NotDepositor();
 
-        ForceReplayL1L2Messages.set(_forceReplay);
+        ForceReplayL1L2Messages.setForceReplay(_forceReplay);
 
         emit ForceReplaySet(_forceReplay);
     }

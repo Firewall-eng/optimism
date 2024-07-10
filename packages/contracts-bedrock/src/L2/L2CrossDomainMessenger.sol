@@ -5,7 +5,6 @@ import { AddressAliasHelper } from "src/vendor/AddressAliasHelper.sol";
 import { Predeploys } from "src/libraries/Predeploys.sol";
 import { CrossDomainMessenger } from "src/universal/CrossDomainMessenger.sol";
 import { ISemver } from "src/universal/ISemver.sol";
-import { IL2MessageValidator } from "src/L2/IL2MessageValidator.sol";
 import { L2ToL1MessagePasser } from "src/L2/L2ToL1MessagePasser.sol";
 import { Constants } from "src/libraries/Constants.sol";
 import { L1Block } from "src/L2/L1Block.sol";
@@ -53,7 +52,7 @@ contract L2CrossDomainMessenger is CrossDomainMessenger, ISemver {
     }
 
     /// @inheritdoc CrossDomainMessenger
-    function _xDomainRelayMessageForceReplayConfigGas(uint64) internal pure override returns (uint64) {
+    function _xDomainRelayMessageForceReplayConfigGas() internal pure override returns (uint64) {
         return RELAY_MESSAGE_FORCE_REPLAY_CONFIG_NOOP_GAS;
     }
 

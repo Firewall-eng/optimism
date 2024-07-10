@@ -162,7 +162,8 @@ contract SystemConfig is OwnableUpgradeable, ISemver, IGasToken, IForceReplayCon
                 optimismMintableERC20Factory: address(0),
                 gasPayingToken: address(0)
             }),
-            _forceReplayL1L2Messages: false
+            _forceReplay: false,
+            _forceReplayFaultProver: address(0)
         });
     }
 
@@ -178,7 +179,8 @@ contract SystemConfig is OwnableUpgradeable, ISemver, IGasToken, IForceReplayCon
     /// @param _batchInbox        Batch inbox address. An identifier for the op-node to find
     ///                           canonical data.
     /// @param _addresses         Set of L1 contract addresses. These should be the proxies.
-    /// @param _forceReplayL1L2Messages Initial force replay value.
+    /// @param _forceReplay       Initial force replay boolean value.
+    /// @param _forceReplayFaultProver Initial force replay fault prover address value.
     function initialize(
         address _owner,
         uint32 _basefeeScalar,
@@ -189,7 +191,8 @@ contract SystemConfig is OwnableUpgradeable, ISemver, IGasToken, IForceReplayCon
         ResourceMetering.ResourceConfig memory _config,
         address _batchInbox,
         SystemConfig.Addresses memory _addresses,
-        bool _forceReplayL1L2Messages
+        bool _forceReplay,
+        address _forceReplayFaultProver
     )
         public
         initializer
@@ -213,7 +216,8 @@ contract SystemConfig is OwnableUpgradeable, ISemver, IGasToken, IForceReplayCon
 
         _setStartBlock();
         _setGasPayingToken(_addresses.gasPayingToken);
-        _setForceReplay(_forceReplayL1L2Messages);
+        _setForceReplay(_forceReplay);
+        _setForceReplayFaultProver(_forceReplayFaultProver);
         _setResourceConfig(_config);
         require(_gasLimit >= minimumGasLimit(), "SystemConfig: gas limit too low");
     }
@@ -314,22 +318,42 @@ contract SystemConfig is OwnableUpgradeable, ISemver, IGasToken, IForceReplayCon
 
     /// @notice Getter for the force replay boolean value.
     function isForcingReplay() public view returns (bool) {
-        return ForceReplayL1L2Messages.getForceReplayL1L2Messages();
+        return ForceReplayL1L2Messages.getForceReplay();
+    }
+
+    /// @notice Getter for the force replay fault prover address value.
+    function forceReplayFaultProver() public view returns (address) {
+        return ForceReplayL1L2Messages.getForceReplayFaultProver();
     }
 
     /// @notice External setter for the force replay boolean value. Can only be called
-    ///         by the owner.
+    ///         by the owner or fault prover if being turned off.
     /// @param _forceReplay Boolean value for the force replay configuration.
-    function setForceReplay(bool _forceReplay) external onlyOwner {
-        _setForceReplay(_forceReplay);
+    function setForceReplay(bool _forceReplay) external {
+        require(owner() == _msgSender() || (!_forceReplay && msg.sender == ForceReplayL1L2Messages.getForceReplayFaultProver()));
+        if (ForceReplayL1L2Messages.getForceReplay() != _forceReplay) {
+            _setForceReplay(_forceReplay);
+        }
     }
 
     /// @notice Internal setter for the force replay boolean value.
     /// @param _forceReplay Boolean value for the force replay configuration.
     function _setForceReplay(bool _forceReplay) internal virtual {
         // Set the force replay in storage and in the OptimismPortal.
-        ForceReplayL1L2Messages.set(_forceReplay);
+        ForceReplayL1L2Messages.setForceReplay(_forceReplay);
         OptimismPortal(payable(optimismPortal())).setForceReplay(_forceReplay);
+    }
+
+    /// @notice External setter for the force replay address value. Can only be called by the owner.
+    /// @param _forceReplayFaultProver Address value for the force replay fault prover.
+    function setForceReplayFaultProver(address _forceReplayFaultProver) external onlyOwner {
+        _setForceReplayFaultProver(_forceReplayFaultProver);
+    }
+
+    /// @notice Internal setter for the force replay fault prover address value.
+    /// @param _forceReplayFaultProver Address value for the force replay fault prover.
+    function _setForceReplayFaultProver(address _forceReplayFaultProver) internal virtual {
+        ForceReplayL1L2Messages.setForceReplayFaultProver(_forceReplayFaultProver);
     }
 
     /// @notice Internal setter for the gas paying token address, includes validation.

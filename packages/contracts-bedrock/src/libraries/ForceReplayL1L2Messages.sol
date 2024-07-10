@@ -16,19 +16,33 @@ interface IForceReplayConfig {
 }
 
 /// @title ForceReplayL1L2Messages
-/// @notice Handles reading and writing the force replay boolean value to storage.
+/// @notice Handles reading and writing the force replay boolean value and fault prover to storage.
 library ForceReplayL1L2Messages {
-    /// @notice The storage slot that contains the boolean for forceReplayL1L2Messages
-    bytes32 internal constant FORCE_REPLAY_L1_L2_MESSAGES =
-        bytes32(uint256(keccak256("opstack.forceReplayL1L2Messages")) - 1);
+    /// @notice The storage slot that contains the boolean for forceReplay
+    bytes32 internal constant FORCE_REPLAY =
+        bytes32(uint256(keccak256("opstack.forceReplay")) - 1);
 
-    /// @notice Reads the FORCE_REPLAY_L1_L2_MESSAGES from the magic storage slot.
-    function getForceReplayL1L2Messages() internal view returns (bool) {
-        return Storage.getBool(FORCE_REPLAY_L1_L2_MESSAGES);
+    /// @notice The storage slot that contains the address for the forceReplayFaultProver
+    bytes32 internal constant FORCE_REPLAY_FAULT_PROVER =
+        bytes32(uint256(keccak256("opstack.forceReplayFaultProver")) - 1);
+
+    /// @notice Reads the FORCE_REPLAY bool from the magic storage slot.
+    function getForceReplay() internal view returns (bool) {
+        return Storage.getBool(FORCE_REPLAY);
+    }
+
+    /// @notice Reads the FORCE_REPLAY_FAULT_PROVER address from the magic storage slot.
+    function getForceReplayFaultProver() internal view returns (address) {
+        return Storage.getAddress(FORCE_REPLAY_FAULT_PROVER);
     }
 
     /// @notice Internal setter for the force replay boolean value.
-    function set(bool _forceReplay) internal {
-        Storage.setBool(FORCE_REPLAY_L1_L2_MESSAGES, _forceReplay);
+    function setForceReplay(bool _forceReplay) internal {
+        Storage.setBool(FORCE_REPLAY, _forceReplay);
+    }
+
+    /// @notice Internal setter for the force replay fault prover.
+    function setForceReplayFaultProver(address _forceReplayFaultProver) internal {
+        Storage.setAddress(FORCE_REPLAY_FAULT_PROVER, _forceReplayFaultProver);
     }
 }
