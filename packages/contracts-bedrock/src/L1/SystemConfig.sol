@@ -8,13 +8,14 @@ import { Storage } from "src/libraries/Storage.sol";
 import { Constants } from "src/libraries/Constants.sol";
 import { OptimismPortal } from "src/L1/OptimismPortal.sol";
 import { GasPayingToken, IGasToken } from "src/libraries/GasPayingToken.sol";
+import { ForceReplay, IForceReplayConfig, IOtherMessenger } from "src/libraries/ForceReplay.sol";
 import { ERC20 } from "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 
 /// @title SystemConfig
 /// @notice The SystemConfig contract is used to manage configuration of an Optimism network.
 ///         All configuration is stored on L1 and picked up by L2 as part of the derviation of
 ///         the L2 chain.
-contract SystemConfig is OwnableUpgradeable, ISemver, IGasToken {
+contract SystemConfig is OwnableUpgradeable, ISemver, IGasToken, IForceReplayConfig {
     /// @notice Enum representing different types of updates.
     /// @custom:value BATCHER              Represents an update to the batcher hash.
     /// @custom:value GAS_CONFIG           Represents an update to txn fee config on L2.
@@ -149,7 +150,9 @@ contract SystemConfig is OwnableUpgradeable, ISemver, IGasToken {
                 optimismPortal: address(0),
                 optimismMintableERC20Factory: address(0),
                 gasPayingToken: address(0)
-            })
+            }),
+            _forceReplay: false,
+            _censorshipFaultProver: address(0)
         });
     }
 
@@ -165,6 +168,8 @@ contract SystemConfig is OwnableUpgradeable, ISemver, IGasToken {
     /// @param _batchInbox        Batch inbox address. An identifier for the op-node to find
     ///                           canonical data.
     /// @param _addresses         Set of L1 contract addresses. These should be the proxies.
+    /// @param _forceReplay       Initial force replay boolean value.
+    /// @param _censorshipFaultProver Initial censorship fault prover address value.
     function initialize(
         address _owner,
         uint256 _overhead,
@@ -174,7 +179,9 @@ contract SystemConfig is OwnableUpgradeable, ISemver, IGasToken {
         address _unsafeBlockSigner,
         ResourceMetering.ResourceConfig memory _config,
         address _batchInbox,
-        SystemConfig.Addresses memory _addresses
+        SystemConfig.Addresses memory _addresses,
+        bool _forceReplay,
+        address _censorshipFaultProver
     )
         public
         initializer
@@ -198,6 +205,9 @@ contract SystemConfig is OwnableUpgradeable, ISemver, IGasToken {
 
         _setStartBlock();
         _setGasPayingToken(_addresses.gasPayingToken);
+
+        _setForceReplay(_forceReplay);
+        _setCensorshipFaultProver(_censorshipFaultProver);
 
         _setResourceConfig(_config);
         require(_gasLimit >= minimumGasLimit(), "SystemConfig: gas limit too low");
@@ -289,6 +299,52 @@ contract SystemConfig is OwnableUpgradeable, ISemver, IGasToken {
     /// @notice Getter for the gas paying token symbol.
     function gasPayingTokenSymbol() external view returns (string memory symbol_) {
         symbol_ = GasPayingToken.getSymbol();
+    }
+
+    /// @notice Getter for the L1CrossDomainMessenger and the L2CrossDomainMessenger addresses.
+    function crossDomainMessengers() public view returns (address l1Messenger_, address l2Messenger_) {
+        l1Messenger_ = Storage.getAddress(L1_CROSS_DOMAIN_MESSENGER_SLOT);
+        l2Messenger_ = IOtherMessenger(l1Messenger_).otherMessenger();
+    }
+
+    /// @notice Getter for the force replay boolean value.
+    function isForcingReplay() public view returns (bool) {
+        return ForceReplay.getForceReplay();
+    }
+
+    /// @notice Getter for the censorship fault prover address value.
+    function censorshipFaultProver() public view returns (address) {
+        return ForceReplay.getCensorshipFaultProver();
+    }
+
+    /// @notice External setter for the force replay boolean value. Can only be called
+    ///         by the owner or fault prover if being turned off.
+    /// @param _forceReplay Boolean value for the force replay configuration.
+    function setForceReplay(bool _forceReplay) external {
+        require(owner() == _msgSender() || (!_forceReplay && msg.sender == ForceReplay.getCensorshipFaultProver()));
+        _setForceReplay(_forceReplay);
+    }
+
+    /// @notice Internal setter for the force replay boolean value.
+    /// @param _forceReplay Boolean value for the force replay configuration.
+    function _setForceReplay(bool _forceReplay) internal virtual {
+        if (ForceReplay.getForceReplay() != _forceReplay) {
+            // Set the force replay in storage and in the OptimismPortal.
+            ForceReplay.setForceReplay(_forceReplay);
+            OptimismPortal(payable(optimismPortal())).setForceReplay(_forceReplay);
+        }
+    }
+
+    /// @notice External setter for the censorship fault prover address. Can only be called by the owner.
+    /// @param _censorshipFaultProver Address value for the censorship fault prover.
+    function setCensorshipFaultProver(address _censorshipFaultProver) external onlyOwner {
+        _setCensorshipFaultProver(_censorshipFaultProver);
+    }
+
+    /// @notice Internal setter for the censorship fault prover address value.
+    /// @param _censorshipFaultProver Address value for the censorship fault prover.
+    function _setCensorshipFaultProver(address _censorshipFaultProver) internal virtual {
+        ForceReplay.setCensorshipFaultProver(_censorshipFaultProver);
     }
 
     /// @notice Internal setter for the gas paying token address, includes validation.

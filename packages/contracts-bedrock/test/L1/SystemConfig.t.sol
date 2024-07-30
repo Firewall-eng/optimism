@@ -142,7 +142,9 @@ contract SystemConfig_Initialize_TestFail is SystemConfig_Initialize_Test {
                 optimismPortal: address(0),
                 optimismMintableERC20Factory: address(0),
                 gasPayingToken: Constants.ETHER
-            })
+            }),
+            _forceReplay: false,
+            _censorshipFaultProver: address(0)
         });
     }
 
@@ -172,7 +174,9 @@ contract SystemConfig_Initialize_TestFail is SystemConfig_Initialize_Test {
                 optimismPortal: address(0),
                 optimismMintableERC20Factory: address(0),
                 gasPayingToken: Constants.ETHER
-            })
+            }),
+            _forceReplay: false,
+            _censorshipFaultProver: address(0)
         });
         assertEq(systemConfig.startBlock(), block.number);
     }
@@ -203,7 +207,9 @@ contract SystemConfig_Initialize_TestFail is SystemConfig_Initialize_Test {
                 optimismPortal: address(0),
                 optimismMintableERC20Factory: address(0),
                 gasPayingToken: Constants.ETHER
-            })
+            }),
+            _forceReplay: false,
+            _censorshipFaultProver: address(0)
         });
         assertEq(systemConfig.startBlock(), 1);
     }
@@ -298,7 +304,9 @@ contract SystemConfig_Init_ResourceConfig is SystemConfig_Init {
                 optimismPortal: address(0),
                 optimismMintableERC20Factory: address(0),
                 gasPayingToken: address(0)
-            })
+            }),
+            _forceReplay: false,
+            _censorshipFaultProver: address(0)
         });
     }
 }
@@ -336,7 +344,9 @@ contract SystemConfig_Init_CustomGasToken is SystemConfig_Init {
                 optimismPortal: address(optimismPortal),
                 optimismMintableERC20Factory: address(0),
                 gasPayingToken: _gasPayingToken
-            })
+            }),
+            _forceReplay: false,
+            _censorshipFaultProver: address(0)
         });
     }
 

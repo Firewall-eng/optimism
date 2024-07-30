@@ -216,6 +216,16 @@ contract OptimismPortal is Initializable, ResourceMetering, ISemver {
         (addr_, decimals_) = systemConfig.gasPayingToken();
     }
 
+    /// @notice Returns the force replay boolean value.
+    function isForcingReplay() internal view returns (bool) {
+        return systemConfig.isForcingReplay();
+    }
+
+    /// @notice Returns the address of the L1CrossDomainMessenger and the L2CrossDomainMessenger.
+    function crossDomainMessengers() internal view returns (address l1Messenger_, address l2Messenger_) {
+        return systemConfig.crossDomainMessengers();
+    }
+
     /// @notice Getter for the resource config.
     ///         Used internally by the ResourceMetering contract.
     ///         The SystemConfig is the source of truth for the resource config.
@@ -540,6 +550,13 @@ contract OptimismPortal is Initializable, ResourceMetering, ISemver {
         // transactions are not gossipped over the p2p network.
         if (_data.length > 120_000) revert LargeCalldata();
 
+        // Check if the we need to enforce forced replayability through the cross domain messengers
+        if (isForcingReplay() && !(msg.sender == tx.origin && msg.sender == _to)) {
+            (address l1Messenger, address l2Messenger) = crossDomainMessengers();
+            require(msg.sender == l1Messenger);
+            require(_to == l2Messenger);
+        }
+
         // Transform the from-address to its alias if the caller is a contract.
         address from = msg.sender;
         if (msg.sender != tx.origin) {
@@ -554,6 +571,31 @@ contract OptimismPortal is Initializable, ResourceMetering, ISemver {
         // Emit a TransactionDeposited event so that the rollup node can derive a deposit
         // transaction for this deposit.
         emit TransactionDeposited(from, _to, DEPOSIT_VERSION, opaqueData);
+    }
+
+    /// @notice Sets the force replay value for the L2 system. Only the SystemConfig contract
+    ///         can call this function.
+    function setForceReplay(bool _forceReplay) external {
+        if (msg.sender != address(systemConfig)) revert Unauthorized();
+
+        // Set L2 deposit gas as used without paying burning gas. Ensures that deposits cannot use too much L2 gas.
+        // This value must be large enough to cover the cost of calling `L1Block.setForceReplay`.
+        useGas(SYSTEM_DEPOSIT_GAS_LIMIT);
+
+        // Emit the special deposit transaction directly that sets the force replay boolean
+        // in the L1Block predeploy contract.
+        emit TransactionDeposited(
+            Constants.DEPOSITOR_ACCOUNT,
+            Predeploys.L1_BLOCK_ATTRIBUTES,
+            DEPOSIT_VERSION,
+            abi.encodePacked(
+                uint256(0), // mint
+                uint256(0), // value
+                uint64(SYSTEM_DEPOSIT_GAS_LIMIT), // gasLimit
+                false, // isCreation,
+                abi.encodeCall(L1Block.setForceReplay, (_forceReplay))
+            )
+        );
     }
 
     /// @notice Sets the gas paying token for the L2 system. This token is used as the
