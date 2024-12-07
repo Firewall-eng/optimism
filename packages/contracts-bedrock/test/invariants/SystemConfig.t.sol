@@ -37,7 +37,7 @@ contract SystemConfig_GasLimitBoundaries_Invariant is Test {
                         gasPayingToken: Constants.ETHER
                     }),
                     false, // force replay
-                    address(0) // censorship fault prover
+                    address(0) // force replay controller
                 )
             )
         );
