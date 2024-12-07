@@ -16,24 +16,24 @@ interface IForceReplayConfig {
 }
 
 /// @title ForceReplay
-/// @notice Handles reading and writing the force replay and censorship prover to storage.
+/// @notice Handles reading and writing the force replay and controller to storage.
 library ForceReplay {
     /// @notice The storage slot that contains the boolean for forceReplay
     bytes32 internal constant FORCE_REPLAY =
         bytes32(uint256(keccak256("opstack.forceReplay")) - 1);
 
-    /// @notice The storage slot that contains the address for the censorshipFaultProver
-    bytes32 internal constant CENSORSHIP_FAULT_PROVER =
-        bytes32(uint256(keccak256("opstack.censorshipFaultProver")) - 1);
+    /// @notice The storage slot that contains the address for the forceReplayController
+    bytes32 internal constant FORCE_REPLAY_CONTROLLER =
+        bytes32(uint256(keccak256("opstack.forceReplayController")) - 1);
 
     /// @notice Reads the FORCE_REPLAY bool from the magic storage slot.
     function getForceReplay() internal view returns (bool) {
         return Storage.getBool(FORCE_REPLAY);
     }
 
-    /// @notice Reads the CENSORSHIP_FAULT_PROVER address from the magic storage slot.
-    function getCensorshipFaultProver() internal view returns (address) {
-        return Storage.getAddress(CENSORSHIP_FAULT_PROVER);
+    /// @notice Reads the FORCE_REPLAY_CONTROLLER address from the magic storage slot.
+    function getForceReplayController() internal view returns (address) {
+        return Storage.getAddress(FORCE_REPLAY_CONTROLLER);
     }
 
     /// @notice Internal setter for the force replay boolean value.
@@ -41,8 +41,8 @@ library ForceReplay {
         Storage.setBool(FORCE_REPLAY, _forceReplay);
     }
 
-    /// @notice Internal setter for the censorship fault prover address value.
-    function setCensorshipFaultProver(address _censorshipFaultProver) internal {
-        Storage.setAddress(CENSORSHIP_FAULT_PROVER, _censorshipFaultProver);
+    /// @notice Internal setter for the force replay controller address value.
+    function setForceReplayController(address _forceReplayController) internal {
+        Storage.setAddress(FORCE_REPLAY_CONTROLLER, _forceReplayController);
     }
 }

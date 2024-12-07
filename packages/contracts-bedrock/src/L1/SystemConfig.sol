@@ -152,7 +152,7 @@ contract SystemConfig is OwnableUpgradeable, ISemver, IGasToken, IForceReplayCon
                 gasPayingToken: address(0)
             }),
             _forceReplay: false,
-            _censorshipFaultProver: address(0)
+            _forceReplayController: address(0)
         });
     }
 
@@ -169,7 +169,7 @@ contract SystemConfig is OwnableUpgradeable, ISemver, IGasToken, IForceReplayCon
     ///                           canonical data.
     /// @param _addresses         Set of L1 contract addresses. These should be the proxies.
     /// @param _forceReplay       Initial force replay boolean value.
-    /// @param _censorshipFaultProver Initial censorship fault prover address value.
+    /// @param _forceReplayController Initial force replay controller address value.
     function initialize(
         address _owner,
         uint256 _overhead,
@@ -181,7 +181,7 @@ contract SystemConfig is OwnableUpgradeable, ISemver, IGasToken, IForceReplayCon
         address _batchInbox,
         SystemConfig.Addresses memory _addresses,
         bool _forceReplay,
-        address _censorshipFaultProver
+        address _forceReplayController
     )
         public
         initializer
@@ -207,7 +207,7 @@ contract SystemConfig is OwnableUpgradeable, ISemver, IGasToken, IForceReplayCon
         _setGasPayingToken(_addresses.gasPayingToken);
 
         _setForceReplay(_forceReplay);
-        _setCensorshipFaultProver(_censorshipFaultProver);
+        _setForceReplayController(_forceReplayController);
 
         _setResourceConfig(_config);
         require(_gasLimit >= minimumGasLimit(), "SystemConfig: gas limit too low");
@@ -312,16 +312,15 @@ contract SystemConfig is OwnableUpgradeable, ISemver, IGasToken, IForceReplayCon
         return ForceReplay.getForceReplay();
     }
 
-    /// @notice Getter for the censorship fault prover address value.
-    function censorshipFaultProver() public view returns (address) {
-        return ForceReplay.getCensorshipFaultProver();
+    /// @notice Getter for the force replay controller address value.
+    function forceReplayController() public view returns (address) {
+        return ForceReplay.getForceReplayController();
     }
 
     /// @notice External setter for the force replay boolean value. Can only be called
     ///         by the owner or fault prover if being turned off.
     /// @param _forceReplay Boolean value for the force replay configuration.
-    function setForceReplay(bool _forceReplay) external {
-        require(owner() == _msgSender() || (!_forceReplay && msg.sender == ForceReplay.getCensorshipFaultProver()));
+    function setForceReplay(bool _forceReplay) external onlyOwner {
         _setForceReplay(_forceReplay);
     }
 
@@ -335,16 +334,16 @@ contract SystemConfig is OwnableUpgradeable, ISemver, IGasToken, IForceReplayCon
         }
     }
 
-    /// @notice External setter for the censorship fault prover address. Can only be called by the owner.
-    /// @param _censorshipFaultProver Address value for the censorship fault prover.
-    function setCensorshipFaultProver(address _censorshipFaultProver) external onlyOwner {
-        _setCensorshipFaultProver(_censorshipFaultProver);
+    /// @notice External setter for the force replay controller address. Can only be called by the owner.
+    /// @param _forceReplayController Address value for the force replay controller.
+    function setForceReplayController(address _forceReplayController) external onlyOwner {
+        _setForceReplayController(_forceReplayController);
     }
 
-    /// @notice Internal setter for the censorship fault prover address value.
-    /// @param _censorshipFaultProver Address value for the censorship fault prover.
-    function _setCensorshipFaultProver(address _censorshipFaultProver) internal virtual {
-        ForceReplay.setCensorshipFaultProver(_censorshipFaultProver);
+    /// @notice Internal setter for the force replay controller address value.
+    /// @param _forceReplayController Address value for the force replay controller.
+    function _setForceReplayController(address _forceReplayController) internal virtual {
+        ForceReplay.setForceReplayController(_forceReplayController);
     }
 
     /// @notice Internal setter for the gas paying token address, includes validation.

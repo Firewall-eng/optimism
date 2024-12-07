@@ -80,7 +80,7 @@ contract DeployConfig is Script {
     bool public useInterop;
 
     bool public forceReplay;
-    address public censorshipFaultProver;
+    address public forceReplayController;
 
     function read(string memory _path) public {
         console.log("DeployConfig: reading file %s", _path);
@@ -160,7 +160,7 @@ contract DeployConfig is Script {
         useInterop = _readOr(_json, "$.useInterop", false);
 
         forceReplay = _readOr(_json, "$.forceReplay", false);
-        censorshipFaultProver = _readOr(_json, "$.censorshipFaultProver", address(0));
+        forceReplayController = _readOr(_json, "$.forceReplayController", address(0));
     }
 
     function l1StartingBlockTag() public returns (bytes32) {
@@ -222,9 +222,9 @@ contract DeployConfig is Script {
         forceReplay = _forceReplay;
     }
 
-    /// @notice Allow the `censorshipFaultProver` config to be overridden in testing environments
-    function setCensorshipFaultProver(address _censorshipFaultProver) public {
-        censorshipFaultProver = _censorshipFaultProver;
+    /// @notice Allow the `forceReplayController` config to be overridden in testing environments
+    function setForceReplayController(address _forceReplayController) public {
+        forceReplayController = _forceReplayController;
     }
 
     function _getBlockByTag(string memory _tag) internal returns (bytes32) {
