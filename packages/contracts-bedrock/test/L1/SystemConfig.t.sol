@@ -144,7 +144,7 @@ contract SystemConfig_Initialize_TestFail is SystemConfig_Initialize_Test {
                 gasPayingToken: Constants.ETHER
             }),
             _forceReplay: false,
-            _censorshipFaultProver: address(0)
+            _forceReplayController: address(0)
         });
     }
 
@@ -176,7 +176,7 @@ contract SystemConfig_Initialize_TestFail is SystemConfig_Initialize_Test {
                 gasPayingToken: Constants.ETHER
             }),
             _forceReplay: false,
-            _censorshipFaultProver: address(0)
+            _forceReplayController: address(0)
         });
         assertEq(systemConfig.startBlock(), block.number);
     }
@@ -209,7 +209,7 @@ contract SystemConfig_Initialize_TestFail is SystemConfig_Initialize_Test {
                 gasPayingToken: Constants.ETHER
             }),
             _forceReplay: false,
-            _censorshipFaultProver: address(0)
+            _forceReplayController: address(0)
         });
         assertEq(systemConfig.startBlock(), 1);
     }
@@ -306,7 +306,7 @@ contract SystemConfig_Init_ResourceConfig is SystemConfig_Init {
                 gasPayingToken: address(0)
             }),
             _forceReplay: false,
-            _censorshipFaultProver: address(0)
+            _forceReplayController: address(0)
         });
     }
 }
@@ -346,7 +346,7 @@ contract SystemConfig_Init_CustomGasToken is SystemConfig_Init {
                 gasPayingToken: _gasPayingToken
             }),
             _forceReplay: false,
-            _censorshipFaultProver: address(0)
+            _forceReplayController: address(0)
         });
     }
 

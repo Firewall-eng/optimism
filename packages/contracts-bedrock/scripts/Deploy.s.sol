@@ -1002,7 +1002,7 @@ contract Deploy is Deployer {
                         gasPayingToken: customGasTokenAddress
                     }),
                     cfg.forceReplay(),
-                    cfg.censorshipFaultProver()
+                    cfg.forceReplayController()
                 )
             )
         });

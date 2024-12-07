@@ -6,6 +6,7 @@ import { SafeCall } from "src/libraries/SafeCall.sol";
 import { L2OutputOracle } from "src/L1/L2OutputOracle.sol";
 import { SystemConfig } from "src/L1/SystemConfig.sol";
 import { SuperchainConfig } from "src/L1/SuperchainConfig.sol";
+import { IForceReplayController } from "src/L1/IForceReplayController.sol";
 import { Constants } from "src/libraries/Constants.sol";
 import { Types } from "src/libraries/Types.sol";
 import { Hashing } from "src/libraries/Hashing.sol";
@@ -219,6 +220,11 @@ contract OptimismPortal is Initializable, ResourceMetering, ISemver {
     /// @notice Returns the force replay boolean value.
     function isForcingReplay() internal view returns (bool) {
         return systemConfig.isForcingReplay();
+    }
+
+    /// @notice Returns the force replay controller address value.
+    function forceReplayController() internal view returns (address) {
+        return systemConfig.forceReplayController();
     }
 
     /// @notice Returns the address of the L1CrossDomainMessenger and the L2CrossDomainMessenger.
@@ -550,11 +556,18 @@ contract OptimismPortal is Initializable, ResourceMetering, ISemver {
         // transactions are not gossipped over the p2p network.
         if (_data.length > 120_000) revert LargeCalldata();
 
-        // Check if the we need to enforce forced replayability through the cross domain messengers
+        // Check if we need to enforce forced replay through the cross domain messengers or if the
+        // force replay controller will allow for forced inclusion.
         if (isForcingReplay() && !(msg.sender == tx.origin && msg.sender == _to)) {
             (address l1Messenger, address l2Messenger) = crossDomainMessengers();
-            require(msg.sender == l1Messenger);
-            require(_to == l2Messenger);
+            if (msg.sender != l1Messenger || _to != l2Messenger) {
+                address controller = forceReplayController();
+                require(controller != address(0), "OptimismPortal: force replay controller is not set");
+                bool forceInclude = IForceReplayController(controller).forceInclude(
+                    msg.sender, _to, _mint, _value, _gasLimit, _isCreation, _data
+                );
+                require(forceInclude, "OptimismPortal: force replay controller denying force include");
+            }
         }
 
         // Transform the from-address to its alias if the caller is a contract.
