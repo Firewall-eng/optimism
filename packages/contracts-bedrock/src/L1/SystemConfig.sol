@@ -22,11 +22,14 @@ contract SystemConfig is OwnableUpgradeable, ISemver, IGasToken, IForceReplayCon
     /// @custom:value GAS_LIMIT            Represents an update to gas limit on L2.
     /// @custom:value UNSAFE_BLOCK_SIGNER  Represents an update to the signer key for unsafe
     ///                                    block distrubution.
+    /// @custom:value FORCE_REPLAY_CONTROLLER Represents an update to the force replay
+    ///                                       controller.
     enum UpdateType {
         BATCHER,
         GAS_CONFIG,
         GAS_LIMIT,
-        UNSAFE_BLOCK_SIGNER
+        UNSAFE_BLOCK_SIGNER,
+        FORCE_REPLAY_CONTROLLER
     }
 
     /// @notice Struct representing the addresses of L1 system contracts. These should be the
@@ -344,6 +347,8 @@ contract SystemConfig is OwnableUpgradeable, ISemver, IGasToken, IForceReplayCon
     /// @param _forceReplayController Address value for the force replay controller.
     function _setForceReplayController(address _forceReplayController) internal virtual {
         ForceReplay.setForceReplayController(_forceReplayController);
+        bytes memory data = abi.encode(_forceReplayController);
+        emit ConfigUpdate(VERSION, UpdateType.FORCE_REPLAY_CONTROLLER, data);
     }
 
     /// @notice Internal setter for the gas paying token address, includes validation.
