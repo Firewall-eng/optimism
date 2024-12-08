@@ -1000,7 +1000,9 @@ contract Deploy is Deployer {
                         optimismPortal: mustGetAddress("OptimismPortalProxy"),
                         optimismMintableERC20Factory: mustGetAddress("OptimismMintableERC20FactoryProxy"),
                         gasPayingToken: customGasTokenAddress
-                    })
+                    }),
+                    cfg.forceReplay(),
+                    cfg.forceReplayController()
                 )
             )
         });

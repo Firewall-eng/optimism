@@ -52,6 +52,16 @@ contract L2CrossDomainMessenger is CrossDomainMessenger, ISemver {
     }
 
     /// @inheritdoc CrossDomainMessenger
+    function _xDomainRelayMessageForceReplayConfigGas() internal pure override returns (uint64) {
+        return RELAY_MESSAGE_FORCE_REPLAY_CONFIG_NOOP_GAS;
+    }
+
+    /// @inheritdoc CrossDomainMessenger
+    function _relayMessageIsForcingReplay() internal view override returns (bool) {
+        return _isOtherMessenger() && L1Block(Predeploys.L1_BLOCK_ATTRIBUTES).isForcingReplay();
+    }
+
+    /// @inheritdoc CrossDomainMessenger
     function _isOtherMessenger() internal view override returns (bool) {
         return AddressAliasHelper.undoL1ToL2Alias(msg.sender) == address(otherMessenger);
     }
