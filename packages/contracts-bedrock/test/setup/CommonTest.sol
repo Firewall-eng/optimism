@@ -22,6 +22,8 @@ contract CommonTest is Test, Setup, Events {
     bool useLegacyContracts;
     address customGasToken;
     bool useInteropOverride;
+    bool forceReplay;
+    address forceReplayController;
 
     function setUp() public virtual override {
         alice = makeAddr("alice");
@@ -44,6 +46,12 @@ contract CommonTest is Test, Setup, Events {
         }
         if (useInteropOverride) {
             deploy.cfg().setUseInterop(true);
+        }
+        if (forceReplay) {
+            deploy.cfg().setForceReplay(true);
+        }
+        if (forceReplayController != address(0)) {
+            deploy.cfg().setForceReplayController(forceReplayController);
         }
 
         vm.etch(address(ffi), vm.getDeployedCode("FFIInterface.sol:FFIInterface"));
@@ -149,5 +157,25 @@ contract CommonTest is Test, Setup, Events {
         }
 
         useInteropOverride = true;
+    }
+
+    function enableForceReplay() public {
+        // Check if the system has already been deployed, based off of the heuristic that alice and bob have not been
+        // set by the `setUp` function yet.
+        if (!(alice == address(0) && bob == address(0))) {
+            revert("CommonTest: Cannot enable forceReplay after deployment. Consider overriding `setUp`.");
+        }
+
+        forceReplay = true;
+    }
+
+    function enableForceReplayController(address _forceReplayController) public {
+        // Check if the system has already been deployed, based off of the heuristic that alice and bob have not been
+        // set by the `setUp` function yet.
+        if (!(alice == address(0) && bob == address(0))) {
+            revert("CommonTest: Cannot enable forceReplayController after deployment. Consider overriding `setUp`.");
+        }
+
+        forceReplayController = _forceReplayController;
     }
 }

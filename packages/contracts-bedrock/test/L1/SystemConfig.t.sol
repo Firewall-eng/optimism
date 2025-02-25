@@ -11,6 +11,7 @@ import { ERC20 } from "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 import { Constants } from "src/libraries/Constants.sol";
 import { Predeploys } from "src/libraries/Predeploys.sol";
 import { GasPayingToken } from "src/libraries/GasPayingToken.sol";
+import { ForceReplay } from "src/libraries/ForceReplay.sol";
 
 // Interfaces
 import { IResourceMetering } from "src/L1/interfaces/IResourceMetering.sol";
@@ -76,6 +77,11 @@ contract SystemConfig_Initialize_Test is SystemConfig_Init {
         (address token, uint8 decimals) = impl.gasPayingToken();
         assertEq(token, Constants.ETHER);
         assertEq(decimals, 18);
+        // Check force replay & controller
+        bool forceReplay = impl.isForcingReplay();
+        address forceReplayController = impl.forceReplayController();
+        assertEq(forceReplay, false);
+        assertEq(forceReplayController, address(0));
     }
 
     /// @dev Tests that initialization sets the correct values.
@@ -112,6 +118,11 @@ contract SystemConfig_Initialize_Test is SystemConfig_Init {
         (address token, uint8 decimals) = systemConfig.gasPayingToken();
         assertEq(token, Constants.ETHER);
         assertEq(decimals, 18);
+        // Check force replay & controller
+        bool forceReplay = systemConfig.isForcingReplay();
+        address forceReplayController = systemConfig.forceReplayController();
+        assertEq(forceReplay, false);
+        assertEq(forceReplayController, address(0));
     }
 }
 
@@ -144,7 +155,9 @@ contract SystemConfig_Initialize_TestFail is SystemConfig_Initialize_Test {
                 optimismPortal: address(0),
                 optimismMintableERC20Factory: address(0),
                 gasPayingToken: Constants.ETHER
-            })
+            }),
+            _forceReplay: false,
+            _forceReplayController: address(0)
         });
     }
 
@@ -174,7 +187,9 @@ contract SystemConfig_Initialize_TestFail is SystemConfig_Initialize_Test {
                 optimismPortal: address(0),
                 optimismMintableERC20Factory: address(0),
                 gasPayingToken: Constants.ETHER
-            })
+            }),
+            _forceReplay: false,
+            _forceReplayController: address(0)
         });
         assertEq(systemConfig.startBlock(), block.number);
     }
@@ -205,7 +220,9 @@ contract SystemConfig_Initialize_TestFail is SystemConfig_Initialize_Test {
                 optimismPortal: address(0),
                 optimismMintableERC20Factory: address(0),
                 gasPayingToken: Constants.ETHER
-            })
+            }),
+            _forceReplay: false,
+            _forceReplayController: address(0)
         });
         assertEq(systemConfig.startBlock(), 1);
     }
@@ -300,7 +317,9 @@ contract SystemConfig_Init_ResourceConfig is SystemConfig_Init {
                 optimismPortal: address(0),
                 optimismMintableERC20Factory: address(0),
                 gasPayingToken: address(0)
-            })
+            }),
+            _forceReplay: false,
+            _forceReplayController: address(0)
         });
     }
 }
@@ -339,7 +358,9 @@ contract SystemConfig_Init_CustomGasToken is SystemConfig_Init {
                 optimismPortal: address(optimismPortal),
                 optimismMintableERC20Factory: address(0),
                 gasPayingToken: _gasPayingToken
-            })
+            }),
+            _forceReplay: false,
+            _forceReplayController: address(0)
         });
     }
 
@@ -471,6 +492,96 @@ contract SystemConfig_Init_CustomGasToken is SystemConfig_Init {
         );
 
         cleanStorageAndInit(address(token));
+    }
+}
+
+contract SystemConfig_Init_ForceReplay is SystemConfig_Init {
+    function setUp() public override {
+        super.enableForceReplay();
+        super.setUp();
+    }
+
+    /// @dev Helper to clean storage and then initialize the system config.
+    function cleanStorageAndInit(bool _forceReplay, address _forceReplayController) internal {
+        vm.store(address(systemConfig), bytes32(0), bytes32(0)); // initailizer
+        vm.store(address(systemConfig), ForceReplay.FORCE_REPLAY, bytes32(0));
+        vm.store(address(systemConfig), ForceReplay.FORCE_REPLAY_CONTROLLER, bytes32(0));
+
+        systemConfig.initialize({
+            _owner: alice,
+            _overhead: 2100,
+            _scalar: 1000000,
+            _batcherHash: bytes32(hex"abcd"),
+            _gasLimit: 30_000_000,
+            _unsafeBlockSigner: address(1),
+            _config: Constants.DEFAULT_RESOURCE_CONFIG(),
+            _batchInbox: address(0),
+            _addresses: SystemConfig.Addresses({
+                l1CrossDomainMessenger: address(0),
+                l1ERC721Bridge: address(0),
+                disputeGameFactory: address(0),
+                l1StandardBridge: address(0),
+                optimismPortal: address(optimismPortal),
+                optimismMintableERC20Factory: address(0),
+                gasPayingToken: address(0)
+            }),
+            _forceReplay: _forceReplay,
+            _forceReplayController: _forceReplayController
+        });
+    }
+
+    /// @dev Tests that initialization sets the correct values and getters work.
+    function test_initialize_forceReplay_succeeds() external view {
+        bool forceReplay = systemConfig.isForcingReplay();
+        assertEq(forceReplay, true);
+    }
+
+    /// @dev Tests that initialization sets the correct values and getters work for
+    /// force replay and controller.
+    function test_initialize_forceReplay_controller_succeeds() external view {
+        bool forceReplay = systemConfig.isForcingReplay();
+        assertEq(forceReplay, true);
+
+        address forceReplayController = systemConfig.forceReplayController();
+        assertEq(forceReplayController, address(0));
+    }
+
+    /// @dev Tests that initialization works for forceReplay with OptimismPortal.
+    function test_setForceReplay_forceReplay_succeeds() external {
+        cleanStorageAndInit(false, address(0));
+
+        vm.expectCall(
+            address(optimismPortal),
+            abi.encodeCall(optimismPortal.setForceReplay, (true))
+        );
+
+        vm.expectEmit(address(optimismPortal));
+        emit TransactionDeposited(
+            0xDeaDDEaDDeAdDeAdDEAdDEaddeAddEAdDEAd0001,
+            Predeploys.L1_BLOCK_ATTRIBUTES,
+            0, // deposit version
+            abi.encodePacked(
+                uint256(0), // mint
+                uint256(0), // value
+                uint64(200_000), // gasLimit
+                false, // isCreation,
+                abi.encodeCall(L1Block.setForceReplay, (true))
+            )
+        );
+
+        cleanStorageAndInit(true, address(0));
+    }
+
+    /// @dev Tests that the config update event is emitted for forceReplayController
+    function test_setForceReplayController_forceReplay_succeeds() external {
+        cleanStorageAndInit(false, address(0));
+
+        address newController = address(100);
+
+        vm.expectEmit(address(systemConfig));
+        emit ConfigUpdate(0, SystemConfig.UpdateType.FORCE_REPLAY_CONTROLLER, abi.encode(newController));
+
+        cleanStorageAndInit(false, newController);
     }
 }
 
