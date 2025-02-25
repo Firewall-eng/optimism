@@ -61,7 +61,7 @@ contract L2CrossDomainMessenger is CrossDomainMessenger, ISemver {
 
     /// @inheritdoc CrossDomainMessenger
     function _relayMessageIsForcingReplay() internal view override returns (bool) {
-        return _isOtherMessenger() && L1Block(Predeploys.L1_BLOCK_ATTRIBUTES).isForcingReplay();
+        return _isOtherMessenger() && IL1Block(Predeploys.L1_BLOCK_ATTRIBUTES).isForcingReplay();
     }
 
     /// @inheritdoc CrossDomainMessenger

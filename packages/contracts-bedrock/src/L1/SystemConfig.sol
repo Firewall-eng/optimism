@@ -357,7 +357,7 @@ contract SystemConfig is OwnableUpgradeable, ISemver, IGasToken, IForceReplayCon
         if (ForceReplay.getForceReplay() != _forceReplay) {
             // Set the force replay in storage and in the OptimismPortal.
             ForceReplay.setForceReplay(_forceReplay);
-            OptimismPortal(payable(optimismPortal())).setForceReplay(_forceReplay);
+            IOptimismPortal(payable(optimismPortal())).setForceReplay(_forceReplay);
         }
     }
 

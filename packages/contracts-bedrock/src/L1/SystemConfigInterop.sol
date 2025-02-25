@@ -63,7 +63,9 @@ contract SystemConfigInterop is SystemConfig {
             _unsafeBlockSigner: _unsafeBlockSigner,
             _config: _config,
             _batchInbox: _batchInbox,
-            _addresses: _addresses
+            _addresses: _addresses,
+            _forceReplay: false,
+            _forceReplayController: address(0)
         });
         Storage.setAddress(DEPENDENCY_MANAGER_SLOT, _dependencyManager);
     }

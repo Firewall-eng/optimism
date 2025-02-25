@@ -10,7 +10,8 @@ interface ISystemConfig {
         FEE_SCALARS,
         GAS_LIMIT,
         UNSAFE_BLOCK_SIGNER,
-        EIP_1559_PARAMS
+        EIP_1559_PARAMS,
+        FORCE_REPLAY_CONTROLLER
     }
 
     struct Addresses {
@@ -41,10 +42,13 @@ interface ISystemConfig {
     function batchInbox() external view returns (address addr_);
     function batcherHash() external view returns (bytes32);
     function blobbasefeeScalar() external view returns (uint32);
+    function crossDomainMessengers() external view returns (address l1Messenger_, address l2Messenger_);
     function disputeGameFactory() external view returns (address addr_);
     function gasLimit() external view returns (uint64);
     function eip1559Denominator() external view returns (uint32);
     function eip1559Elasticity() external view returns (uint32);
+    function forceReplay() external view returns (bool);
+    function forceReplayController() external view returns (address);
     function gasPayingToken() external view returns (address addr_, uint8 decimals_);
     function gasPayingTokenName() external view returns (string memory name_);
     function gasPayingTokenSymbol() external view returns (string memory symbol_);
@@ -57,10 +61,13 @@ interface ISystemConfig {
         address _unsafeBlockSigner,
         IResourceMetering.ResourceConfig memory _config,
         address _batchInbox,
-        Addresses memory _addresses
+        Addresses memory _addresses,
+        bool _forceReplay,
+        address _forceReplayController
     )
         external;
     function isCustomGasToken() external view returns (bool);
+    function isForcingReplay() external view returns (bool);
     function l1CrossDomainMessenger() external view returns (address addr_);
     function l1ERC721Bridge() external view returns (address addr_);
     function l1StandardBridge() external view returns (address addr_);
@@ -74,6 +81,8 @@ interface ISystemConfig {
     function resourceConfig() external view returns (IResourceMetering.ResourceConfig memory);
     function scalar() external view returns (uint256);
     function setBatcherHash(bytes32 _batcherHash) external;
+    function setForceReplay(bool _forceReplay) external;
+    function setForceReplayController(address _forceReplayController) external;
     function setGasConfig(uint256 _overhead, uint256 _scalar) external;
     function setGasConfigEcotone(uint32 _basefeeScalar, uint32 _blobbasefeeScalar) external;
     function setGasLimit(uint64 _gasLimit) external;

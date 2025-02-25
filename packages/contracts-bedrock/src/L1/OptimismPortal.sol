@@ -634,7 +634,7 @@ contract OptimismPortal is Initializable, ResourceMetering, ISemver {
                 uint256(0), // value
                 uint64(SYSTEM_DEPOSIT_GAS_LIMIT), // gasLimit
                 false, // isCreation,
-                abi.encodeCall(L1Block.setForceReplay, (_forceReplay))
+                abi.encodeCall(IL1Block.setForceReplay, (_forceReplay))
             )
         );
     }

@@ -509,14 +509,14 @@ contract SystemConfig_Init_ForceReplay is SystemConfig_Init {
 
         systemConfig.initialize({
             _owner: alice,
-            _overhead: 2100,
-            _scalar: 1000000,
+            _basefeeScalar: 2100,
+            _blobbasefeeScalar: 1000000,
             _batcherHash: bytes32(hex"abcd"),
             _gasLimit: 30_000_000,
             _unsafeBlockSigner: address(1),
             _config: Constants.DEFAULT_RESOURCE_CONFIG(),
             _batchInbox: address(0),
-            _addresses: SystemConfig.Addresses({
+            _addresses: ISystemConfig.Addresses({
                 l1CrossDomainMessenger: address(0),
                 l1ERC721Bridge: address(0),
                 disputeGameFactory: address(0),
@@ -565,7 +565,7 @@ contract SystemConfig_Init_ForceReplay is SystemConfig_Init {
                 uint256(0), // value
                 uint64(200_000), // gasLimit
                 false, // isCreation,
-                abi.encodeCall(L1Block.setForceReplay, (true))
+                abi.encodeCall(IL1Block.setForceReplay, (true))
             )
         );
 
@@ -579,7 +579,7 @@ contract SystemConfig_Init_ForceReplay is SystemConfig_Init {
         address newController = address(100);
 
         vm.expectEmit(address(systemConfig));
-        emit ConfigUpdate(0, SystemConfig.UpdateType.FORCE_REPLAY_CONTROLLER, abi.encode(newController));
+        emit ConfigUpdate(0, ISystemConfig.UpdateType.FORCE_REPLAY_CONTROLLER, abi.encode(newController));
 
         cleanStorageAndInit(false, newController);
     }
