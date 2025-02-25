@@ -35,7 +35,9 @@ contract SystemConfig_GasLimitBoundaries_Invariant is Test {
                         optimismPortal: address(0),
                         optimismMintableERC20Factory: address(0),
                         gasPayingToken: Constants.ETHER
-                    })
+                    }),
+                    false, // force replay
+                    address(0) // force replay controller
                 )
             )
         );

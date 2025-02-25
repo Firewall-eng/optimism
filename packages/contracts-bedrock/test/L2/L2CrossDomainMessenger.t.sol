@@ -331,4 +331,38 @@ contract L2CrossDomainMessenger_Test is Bridge_Initializer {
             hex"1111"
         );
     }
+
+    /// @dev Tests that the relayMessage succeeds when force replay is turned on, saving the message
+    ///      in the failed messages mapping rather than executing it.
+    function test_relayMessage_forceReplay_succeeds() external virtual {
+        // Mock the forceReplay setting to return true
+        vm.mockCall(address(l1Block), abi.encodeWithSignature("isForcingReplay()"), abi.encode(true));
+
+        address target = address(0xabcd);
+        address sender = address(l1CrossDomainMessenger);
+        address caller = AddressAliasHelper.applyL1ToL2Alias(address(l1CrossDomainMessenger));
+
+        vm.prank(caller);
+
+        vm.expectEmit(true, true, true, true);
+
+        bytes32 hash =
+            Hashing.hashCrossDomainMessage(Encoding.encodeVersionedNonce(0, 1), sender, target, 0, 0, hex"1111");
+
+        emit FailedRelayedMessage(hash);
+
+        l2CrossDomainMessenger.relayMessage(
+            Encoding.encodeVersionedNonce(0, 1), // nonce
+            sender,
+            target,
+            0, // value
+            0,
+            hex"1111"
+        );
+
+        // the message hash is in the failedMessages mapping
+        assert(l2CrossDomainMessenger.failedMessages(hash));
+        // it is not in the successful messages mapping
+        assertEq(l2CrossDomainMessenger.successfulMessages(hash), false);
+    }
 }

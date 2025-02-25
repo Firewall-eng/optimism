@@ -6,6 +6,7 @@ import { SafeCall } from "src/libraries/SafeCall.sol";
 import { L2OutputOracle } from "src/L1/L2OutputOracle.sol";
 import { SystemConfig } from "src/L1/SystemConfig.sol";
 import { SuperchainConfig } from "src/L1/SuperchainConfig.sol";
+import { IForceReplayController } from "src/L1/IForceReplayController.sol";
 import { Constants } from "src/libraries/Constants.sol";
 import { Types } from "src/libraries/Types.sol";
 import { Hashing } from "src/libraries/Hashing.sol";
@@ -214,6 +215,21 @@ contract OptimismPortal is Initializable, ResourceMetering, ISemver {
     /// @notice Returns the gas paying token and its decimals.
     function gasPayingToken() internal view returns (address addr_, uint8 decimals_) {
         (addr_, decimals_) = systemConfig.gasPayingToken();
+    }
+
+    /// @notice Returns the force replay boolean value.
+    function isForcingReplay() internal view returns (bool) {
+        return systemConfig.isForcingReplay();
+    }
+
+    /// @notice Returns the force replay controller address value.
+    function forceReplayController() internal view returns (address) {
+        return systemConfig.forceReplayController();
+    }
+
+    /// @notice Returns the address of the L1CrossDomainMessenger and the L2CrossDomainMessenger.
+    function crossDomainMessengers() internal view returns (address l1Messenger_, address l2Messenger_) {
+        return systemConfig.crossDomainMessengers();
     }
 
     /// @notice Getter for the resource config.
@@ -540,6 +556,20 @@ contract OptimismPortal is Initializable, ResourceMetering, ISemver {
         // transactions are not gossipped over the p2p network.
         if (_data.length > 120_000) revert LargeCalldata();
 
+        // Check if we need to enforce forced replay through the cross domain messengers or if the
+        // force replay controller will allow for forced inclusion.
+        if (isForcingReplay() && !(msg.sender == tx.origin && msg.sender == _to)) {
+            (address l1Messenger, address l2Messenger) = crossDomainMessengers();
+            if (msg.sender != l1Messenger || _to != l2Messenger) {
+                address controller = forceReplayController();
+                require(controller != address(0), "OptimismPortal: force replay controller is not set");
+                bool forceInclude = IForceReplayController(controller).forceInclude(
+                    msg.sender, _to, _mint, _value, _gasLimit, _isCreation, _data
+                );
+                require(forceInclude, "OptimismPortal: force replay controller denying force include");
+            }
+        }
+
         // Transform the from-address to its alias if the caller is a contract.
         address from = msg.sender;
         if (msg.sender != tx.origin) {
@@ -554,6 +584,31 @@ contract OptimismPortal is Initializable, ResourceMetering, ISemver {
         // Emit a TransactionDeposited event so that the rollup node can derive a deposit
         // transaction for this deposit.
         emit TransactionDeposited(from, _to, DEPOSIT_VERSION, opaqueData);
+    }
+
+    /// @notice Sets the force replay value for the L2 system. Only the SystemConfig contract
+    ///         can call this function.
+    function setForceReplay(bool _forceReplay) external {
+        if (msg.sender != address(systemConfig)) revert Unauthorized();
+
+        // Set L2 deposit gas as used without paying burning gas. Ensures that deposits cannot use too much L2 gas.
+        // This value must be large enough to cover the cost of calling `L1Block.setForceReplay`.
+        useGas(SYSTEM_DEPOSIT_GAS_LIMIT);
+
+        // Emit the special deposit transaction directly that sets the force replay boolean
+        // in the L1Block predeploy contract.
+        emit TransactionDeposited(
+            Constants.DEPOSITOR_ACCOUNT,
+            Predeploys.L1_BLOCK_ATTRIBUTES,
+            DEPOSIT_VERSION,
+            abi.encodePacked(
+                uint256(0), // mint
+                uint256(0), // value
+                uint64(SYSTEM_DEPOSIT_GAS_LIMIT), // gasLimit
+                false, // isCreation,
+                abi.encodeCall(L1Block.setForceReplay, (_forceReplay))
+            )
+        );
     }
 
     /// @notice Sets the gas paying token for the L2 system. This token is used as the
