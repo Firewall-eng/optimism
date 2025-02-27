@@ -497,10 +497,7 @@ contract SystemConfig_Init_ForceReplay is SystemConfig_Init {
 
     /// @dev Tests that initialization works for forceReplay with OptimismPortal.
     function test_setForceReplay_forceReplay_succeeds() external {
-        vm.expectCall(
-            address(optimismPortal),
-            abi.encodeCall(optimismPortal.setForceReplay, (true))
-        );
+        vm.expectCall(address(optimismPortal), abi.encodeCall(optimismPortal.setForceReplay, (true)));
 
         vm.expectEmit(address(optimismPortal));
         emit TransactionDeposited(

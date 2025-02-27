@@ -19,12 +19,10 @@ interface IForceReplayConfig {
 /// @notice Handles reading and writing the force replay and controller to storage.
 library ForceReplay {
     /// @notice The storage slot that contains the boolean for forceReplay
-    bytes32 internal constant FORCE_REPLAY =
-        bytes32(uint256(keccak256("opstack.forceReplay")) - 1);
+    bytes32 internal constant FORCE_REPLAY = bytes32(uint256(keccak256("opstack.forceReplay")) - 1);
 
     /// @notice The storage slot that contains the address for the forceReplayController
-    bytes32 internal constant FORCE_REPLAY_CONTROLLER =
-        bytes32(uint256(keccak256("opstack.forceReplayController")) - 1);
+    bytes32 internal constant FORCE_REPLAY_CONTROLLER = bytes32(uint256(keccak256("opstack.forceReplayController")) - 1);
 
     /// @notice Reads the FORCE_REPLAY bool from the magic storage slot.
     function getForceReplay() internal view returns (bool) {
