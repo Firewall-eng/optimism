@@ -92,9 +92,6 @@ contract DeployConfig is Script {
 
     bool public useInterop;
 
-    bool public forceReplay;
-    address public forceReplayController;
-
     function read(string memory _path) public {
         console.log("DeployConfig: reading file %s", _path);
         try vm.readFile(_path) returns (string memory data_) {
@@ -180,9 +177,6 @@ contract DeployConfig is Script {
         customGasTokenAddress = _readOr(_json, "$.customGasTokenAddress", address(0));
 
         useInterop = _readOr(_json, "$.useInterop", false);
-
-        forceReplay = _readOr(_json, "$.forceReplay", false);
-        forceReplayController = _readOr(_json, "$.forceReplayController", address(0));
     }
 
     function fork() public view returns (Fork fork_) {
@@ -251,16 +245,6 @@ contract DeployConfig is Script {
     function setUseCustomGasToken(address _token) public {
         useCustomGasToken = true;
         customGasTokenAddress = _token;
-    }
-
-    /// @notice Allow the `forceReplay` config to be overridden in testing environments
-    function setForceReplay(bool _forceReplay) public {
-        forceReplay = _forceReplay;
-    }
-
-    /// @notice Allow the `forceReplayController` config to be overridden in testing environments
-    function setForceReplayController(address _forceReplayController) public {
-        forceReplayController = _forceReplayController;
     }
 
     function latestGenesisFork() internal view returns (Fork) {

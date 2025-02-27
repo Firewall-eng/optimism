@@ -177,9 +177,7 @@ contract SystemConfig is OwnableUpgradeable, ISemver, IGasToken, IForceReplayCon
                 optimismPortal: address(0),
                 optimismMintableERC20Factory: address(0),
                 gasPayingToken: address(0)
-            }),
-            _forceReplay: false,
-            _forceReplayController: address(0)
+            })
         });
     }
 
@@ -195,8 +193,6 @@ contract SystemConfig is OwnableUpgradeable, ISemver, IGasToken, IForceReplayCon
     /// @param _batchInbox        Batch inbox address. An identifier for the op-node to find
     ///                           canonical data.
     /// @param _addresses         Set of L1 contract addresses. These should be the proxies.
-    /// @param _forceReplay       Initial force replay boolean value.
-    /// @param _forceReplayController Initial force replay controller address value.
     function initialize(
         address _owner,
         uint32 _basefeeScalar,
@@ -206,9 +202,7 @@ contract SystemConfig is OwnableUpgradeable, ISemver, IGasToken, IForceReplayCon
         address _unsafeBlockSigner,
         IResourceMetering.ResourceConfig memory _config,
         address _batchInbox,
-        SystemConfig.Addresses memory _addresses,
-        bool _forceReplay,
-        address _forceReplayController
+        SystemConfig.Addresses memory _addresses
     )
         public
         initializer
@@ -232,9 +226,6 @@ contract SystemConfig is OwnableUpgradeable, ISemver, IGasToken, IForceReplayCon
 
         _setStartBlock();
         _setGasPayingToken(_addresses.gasPayingToken);
-
-        _setForceReplay(_forceReplay);
-        _setForceReplayController(_forceReplayController);
 
         _setResourceConfig(_config);
         require(_gasLimit >= minimumGasLimit(), "SystemConfig: gas limit too low");

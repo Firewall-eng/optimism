@@ -61,9 +61,7 @@ interface ISystemConfig {
         address _unsafeBlockSigner,
         IResourceMetering.ResourceConfig memory _config,
         address _batchInbox,
-        Addresses memory _addresses,
-        bool _forceReplay,
-        address _forceReplayController
+        Addresses memory _addresses
     )
         external;
     function isCustomGasToken() external view returns (bool);
