@@ -17,10 +17,12 @@ interface IL1Block {
     function gasPayingTokenSymbol() external view returns (string memory symbol_);
     function hash() external view returns (bytes32);
     function isCustomGasToken() external view returns (bool);
+    function isForcingReplay() external view returns (bool);
     function l1FeeOverhead() external view returns (uint256);
     function l1FeeScalar() external view returns (uint256);
     function number() external view returns (uint64);
     function sequenceNumber() external view returns (uint64);
+    function setForceReplay(bool _forceReplay) external;
     function setGasPayingToken(address _token, uint8 _decimals, bytes32 _name, bytes32 _symbol) external;
     function setL1BlockValues(
         uint64 _number,

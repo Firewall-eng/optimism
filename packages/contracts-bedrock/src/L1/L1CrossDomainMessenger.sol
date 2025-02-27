@@ -65,6 +65,11 @@ contract L1CrossDomainMessenger is CrossDomainMessenger, ISemver {
         (addr_, decimals_) = systemConfig.gasPayingToken();
     }
 
+    /// @inheritdoc CrossDomainMessenger
+    function _xDomainRelayMessageForceReplayConfigGas() internal pure override returns (uint64) {
+        return RELAY_MESSAGE_FORCE_REPLAY_CONFIG_CALL_GAS;
+    }
+
     /// @notice Getter function for the OptimismPortal contract on this chain.
     ///         Public getter is legacy and will be removed in the future. Use `portal()` instead.
     /// @return Contract of the OptimismPortal on this chain.

@@ -11,6 +11,7 @@ import { ERC20 } from "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 import { Constants } from "src/libraries/Constants.sol";
 import { Predeploys } from "src/libraries/Predeploys.sol";
 import { GasPayingToken } from "src/libraries/GasPayingToken.sol";
+import { ForceReplay } from "src/libraries/ForceReplay.sol";
 
 // Interfaces
 import { IResourceMetering } from "src/L1/interfaces/IResourceMetering.sol";
@@ -76,6 +77,11 @@ contract SystemConfig_Initialize_Test is SystemConfig_Init {
         (address token, uint8 decimals) = impl.gasPayingToken();
         assertEq(token, Constants.ETHER);
         assertEq(decimals, 18);
+        // Check force replay & controller
+        bool forceReplay = impl.isForcingReplay();
+        address forceReplayController = impl.forceReplayController();
+        assertEq(forceReplay, false);
+        assertEq(forceReplayController, address(0));
     }
 
     /// @dev Tests that initialization sets the correct values.
@@ -112,6 +118,11 @@ contract SystemConfig_Initialize_Test is SystemConfig_Init {
         (address token, uint8 decimals) = systemConfig.gasPayingToken();
         assertEq(token, Constants.ETHER);
         assertEq(decimals, 18);
+        // Check force replay & controller
+        bool forceReplay = systemConfig.isForcingReplay();
+        address forceReplayController = systemConfig.forceReplayController();
+        assertEq(forceReplay, false);
+        assertEq(forceReplayController, address(0));
     }
 }
 
@@ -471,6 +482,62 @@ contract SystemConfig_Init_CustomGasToken is SystemConfig_Init {
         );
 
         cleanStorageAndInit(address(token));
+    }
+}
+
+contract SystemConfig_Init_ForceReplay is SystemConfig_Init {
+    /// @dev Tests that the default values are correct and getters work.
+    function test_initialize_forceReplay_succeeds() external view {
+        bool forceReplay = systemConfig.isForcingReplay();
+        assertEq(forceReplay, false);
+
+        address forceReplayController = systemConfig.forceReplayController();
+        assertEq(forceReplayController, address(0));
+    }
+
+    /// @dev Tests that initialization works for forceReplay with OptimismPortal.
+    function test_setForceReplay_forceReplay_succeeds() external {
+        vm.expectCall(address(optimismPortal), abi.encodeCall(optimismPortal.setForceReplay, (true)));
+
+        vm.expectEmit(address(optimismPortal));
+        emit TransactionDeposited(
+            0xDeaDDEaDDeAdDeAdDEAdDEaddeAddEAdDEAd0001,
+            Predeploys.L1_BLOCK_ATTRIBUTES,
+            0, // deposit version
+            abi.encodePacked(
+                uint256(0), // mint
+                uint256(0), // value
+                uint64(200_000), // gasLimit
+                false, // isCreation,
+                abi.encodeCall(IL1Block.setForceReplay, (true))
+            )
+        );
+
+        vm.prank(systemConfig.owner());
+        systemConfig.setForceReplay(true);
+
+        bool forceReplay = systemConfig.isForcingReplay();
+        assertEq(forceReplay, true);
+
+        address forceReplayController = systemConfig.forceReplayController();
+        assertEq(forceReplayController, address(0));
+    }
+
+    /// @dev Tests that the config update event is emitted for forceReplayController
+    function test_setForceReplayController_forceReplay_succeeds() external {
+        address newController = address(100);
+
+        vm.expectEmit(address(systemConfig));
+        emit ConfigUpdate(0, ISystemConfig.UpdateType.FORCE_REPLAY_CONTROLLER, abi.encode(newController));
+
+        vm.prank(systemConfig.owner());
+        systemConfig.setForceReplayController(newController);
+
+        address forceReplayController = systemConfig.forceReplayController();
+        assertEq(forceReplayController, newController);
+
+        bool forceReplay = systemConfig.isForcingReplay();
+        assertEq(forceReplay, false);
     }
 }
 

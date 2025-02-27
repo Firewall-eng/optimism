@@ -114,6 +114,13 @@ abstract contract CrossDomainMessenger is
     ///         call in `relayMessage`.
     uint64 public constant RELAY_GAS_CHECK_BUFFER = 5_000;
 
+    /// @notice Gas reserved for the hardcoded control flow where we skip checking the force replay
+    ///         config value.
+    uint64 public constant RELAY_MESSAGE_FORCE_REPLAY_CONFIG_NOOP_GAS = 50;
+
+    /// @notice Gas reserved for static calling the force replay config value.
+    uint64 public constant RELAY_MESSAGE_FORCE_REPLAY_CONFIG_CALL_GAS = 6_000;
+
     /// @notice Mapping of message hashes to boolean receipt values. Note that a message will only
     ///         be present in this mapping if it has successfully been relayed on this chain, and
     ///         can therefore not be relayed again.
@@ -255,6 +262,13 @@ abstract contract CrossDomainMessenger is
 
         require(successfulMessages[versionedHash] == false, "CrossDomainMessenger: message has already been relayed");
 
+        // Check the forced replay configuration.
+        if (_relayMessageIsForcingReplay()) {
+            failedMessages[versionedHash] = true;
+            emit FailedRelayedMessage(versionedHash);
+            return;
+        }
+
         // If there is not enough gas left to perform the external call and finish the execution,
         // return early and assign the message to the failedMessages mapping.
         // We are asserting that we have enough gas to:
@@ -359,7 +373,9 @@ abstract contract CrossDomainMessenger is
         + RELAY_RESERVED_GAS
         // Gas reserved for the execution between the `hasMinGas` check and the `CALL`
         // opcode. (Conservative)
-        + RELAY_GAS_CHECK_BUFFER;
+        + RELAY_GAS_CHECK_BUFFER
+        // Gas reserved for force replay config check on the other domain
+        + _xDomainRelayMessageForceReplayConfigGas();
     }
 
     /// @notice Returns the address of the gas token and the token's decimals.
@@ -369,6 +385,15 @@ abstract contract CrossDomainMessenger is
     function isCustomGasToken() internal view returns (bool) {
         (address token,) = gasPayingToken();
         return token != Constants.ETHER;
+    }
+
+    /// @notice Internal getter that returns the amount of gas reserved for checking the force
+    ///         replay config value on the other (x) domain.
+    /// @return Gas reserved for doing the forced replay check on the other domain.
+    function _xDomainRelayMessageForceReplayConfigGas() internal pure virtual returns (uint64);
+
+    function _relayMessageIsForcingReplay() internal view virtual returns (bool) {
+        return false;
     }
 
     /// @notice Initializer.
