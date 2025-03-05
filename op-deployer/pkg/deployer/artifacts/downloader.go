@@ -96,6 +96,7 @@ func Download(ctx context.Context, loc *Locator, progress DownloadProgressor) (f
 		return fs.(foundry.StatDirFs), cleanup, nil
 	case "file":
 		fs := os.DirFS(u.Path)
+		println("found fs: ", fs, "path: ", u.Path)
 		return fs.(foundry.StatDirFs), noopCleanup, nil
 	default:
 		return nil, nil, ErrUnsupportedArtifactsScheme

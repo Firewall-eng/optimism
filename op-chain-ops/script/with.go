@@ -21,6 +21,8 @@ func checkABI(abiData *abi.ABI, methodSignature string) bool {
 // The returned cleanup function wipes the script account again (but not the storage).
 func WithScript[B any](h *Host, name string, contract string) (b *B, cleanup func(), err error) {
 	// load contract artifact
+	arts, _ := h.af.ListArtifacts()
+	println("host: ", h, "name: ", name, "contract: ", contract, "arts: ", arts)
 	artifact, err := h.af.ReadArtifact(name, contract)
 	if err != nil {
 		return nil, nil, fmt.Errorf("could not load script artifact: %w", err)

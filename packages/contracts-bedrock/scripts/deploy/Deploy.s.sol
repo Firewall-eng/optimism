@@ -845,6 +845,15 @@ contract Deploy is Deployer {
         });
 
         ISystemConfig config = ISystemConfig(systemConfigProxy);
+        // Set up force replay configuration after initialization
+        if (cfg.forceReplay()) {
+            console.log("Setting up force replay configuration");
+            config.setForceReplay(true);
+            if (cfg.forceReplayController() != address(0)) {
+                config.setForceReplayController(cfg.forceReplayController());
+            }
+        }
+
         string memory version = config.version();
         console.log("SystemConfig version: %s", version);
 

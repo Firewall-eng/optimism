@@ -646,6 +646,7 @@ type L2InitializationConfig struct {
 	UpgradeScheduleDeployConfig
 	L2CoreDeployConfig
 	AltDADeployConfig
+	ForceReplayDeployConfig
 }
 
 func (d *L2InitializationConfig) Check(log log.Logger) error {
@@ -1196,4 +1197,21 @@ func (m *MarshalableRPCBlockNumberOrHash) Hash() (common.Hash, bool) {
 // String wraps the rpc.BlockNumberOrHash String method.
 func (m *MarshalableRPCBlockNumberOrHash) String() string {
 	return (*rpc.BlockNumberOrHash)(m).String()
+}
+
+// ForceReplayDeployConfig configures the force replay functionality.
+type ForceReplayDeployConfig struct {
+	// ForceReplay is a flag that indicates if force replay is enabled.
+	ForceReplay bool `json:"forceReplay"`
+	// ForceReplayController is the address of the controller that can authorize forced inclusion of transactions.
+	ForceReplayController common.Address `json:"forceReplayController"`
+}
+
+var _ ConfigChecker = (*ForceReplayDeployConfig)(nil)
+
+func (d *ForceReplayDeployConfig) Check(log log.Logger) error {
+	if d.ForceReplay && d.ForceReplayController == (common.Address{}) {
+		log.Warn("ForceReplay is enabled but ForceReplayController is not set")
+	}
+	return nil
 }

@@ -156,6 +156,7 @@ func NewHost(
 	executionContext Context,
 	options ...HostOption,
 ) *Host {
+	println("source map fs: ", srcFS, "fs: ", fs.FS, "options: ", options)
 	h := &Host{
 		log:              logger,
 		af:               fs,

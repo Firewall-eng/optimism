@@ -91,6 +91,10 @@ func CombineDeployConfig(intent *Intent, chainIntent *ChainIntent, state *State,
 				ProxyAdminOwner:  chainIntent.Roles.L2ProxyAdminOwner,
 				FinalSystemOwner: chainIntent.Roles.L1ProxyAdminOwner,
 			},
+			ForceReplayDeployConfig: genesis.ForceReplayDeployConfig{
+				ForceReplay:           chainIntent.ForceReplay,
+				ForceReplayController: chainIntent.ForceReplayController,
+			},
 		},
 		FaultProofDeployConfig: genesis.FaultProofDeployConfig{
 			UseFaultProofs:                  true,

@@ -74,6 +74,8 @@ type DeployOPChainInputV160 struct {
 	UnsafeBlockSigner      common.Address
 	Proposer               common.Address
 	Challenger             common.Address
+	ForceReplay            bool
+	ForceReplayController  common.Address
 
 	BasefeeScalar     uint32
 	BlobBaseFeeScalar uint32
@@ -181,6 +183,8 @@ func deployOPChain[T any](host *script.Host, input T) (DeployOPChainOutput, erro
 	var dco DeployOPChainOutput
 	inputAddr := host.NewScriptAddress()
 	outputAddr := host.NewScriptAddress()
+
+	println("inputAddr: ", inputAddr.String(), "outputAddr: ", outputAddr.String())
 
 	cleanupInput, err := script.WithPrecompileAtAddress[*T](host, inputAddr, &input)
 	if err != nil {

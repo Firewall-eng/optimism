@@ -82,9 +82,10 @@ func (af *ArtifactsFS) ListContracts(name string) ([]string, error) {
 // The name of the artifact is the source-file name, this must include the suffix such as ".sol".
 func (af *ArtifactsFS) ReadArtifact(name string, contract string) (*Artifact, error) {
 	artifactPath := path.Join(name, contract+".json")
+	println("artifactPath: ", artifactPath)
 	f, err := af.FS.Open(artifactPath)
 	if err != nil {
-		return nil, fmt.Errorf("failed to open artifact %q: %w", artifactPath, err)
+		return nil, fmt.Errorf("failed to open artifact %q: %v", artifactPath, err)
 	}
 	defer f.Close()
 	dec := json.NewDecoder(f)

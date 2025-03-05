@@ -11,6 +11,7 @@ type PreinstallsScript struct {
 }
 
 func InsertPreinstalls(host *script.Host) error {
+	println("are we doing preinstalls?")
 	l2GenesisScript, cleanupL2Genesis, err := script.WithScript[PreinstallsScript](host, "SetPreinstalls.s.sol", "SetPreinstalls")
 	if err != nil {
 		return fmt.Errorf("failed to load SetPreinstalls script: %w", err)

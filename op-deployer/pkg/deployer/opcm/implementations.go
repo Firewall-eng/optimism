@@ -79,6 +79,7 @@ func DeployImplementations(
 	if input.UseInterop {
 		implContract = "DeployImplementationsInterop"
 	}
+	println("are we doing deploy implementations?")
 	deployScript, cleanupDeploy, err := script.WithScript[DeployImplementationsScript](host, "DeployImplementations.s.sol", implContract)
 	if err != nil {
 		return output, fmt.Errorf("failed to load %s script: %w", implContract, err)

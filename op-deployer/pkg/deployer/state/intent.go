@@ -167,6 +167,12 @@ type ChainIntent struct {
 	DeployOverrides map[string]any `json:"deployOverrides" toml:"deployOverrides"`
 
 	DangerousAltDAConfig genesis.AltDADeployConfig `json:"dangerousAltDAConfig,omitempty" toml:"dangerousAltDAConfig,omitempty"`
+
+	// ForceReplay is a flag that indicates if force replay is enabled.
+	ForceReplay bool `json:"forceReplay" toml:"forceReplay"`
+
+	// ForceReplayController is the address of the controller that can authorize forced inclusion of transactions.
+	ForceReplayController common.Address `json:"forceReplayController" toml:"forceReplayController"`
 }
 
 type ChainRoles struct {

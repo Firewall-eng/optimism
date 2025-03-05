@@ -42,6 +42,7 @@ func (a *Locator) UnmarshalText(text []byte) error {
 			return err
 		}
 
+		println("loc: ", loc, "url", loc.URL.String())
 		*a = *loc
 		return nil
 	}
