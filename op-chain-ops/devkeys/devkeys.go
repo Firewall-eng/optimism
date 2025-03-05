@@ -158,6 +158,8 @@ const (
 	SequencerFeeVaultRecipientRole ChainOperatorRole = 9
 	// SystemConfigOwner is the key that can make SystemConfig changes.
 	SystemConfigOwner ChainOperatorRole = 10
+	// ForceReplayControllerRole is the key that can authorize forced inclusion of transactions
+	ForceReplayControllerRole ChainOperatorRole = 11
 )
 
 func (role ChainOperatorRole) String() string {
@@ -184,6 +186,8 @@ func (role ChainOperatorRole) String() string {
 		return "sequencer-fee-vault-recipient"
 	case SystemConfigOwner:
 		return "system-config-owner"
+	case ForceReplayControllerRole:
+		return "force-replay-controller"
 	default:
 		return fmt.Sprintf("unknown-operator-%d", uint64(role))
 	}

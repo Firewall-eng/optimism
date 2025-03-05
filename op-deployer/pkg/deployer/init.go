@@ -124,6 +124,8 @@ func Init(cfg InitConfig) error {
 			SequencerFeeVaultRecipient: addrFor(devkeys.SequencerFeeVaultRecipientRole.Key(l2ChainIDBig)),
 			Eip1559Denominator:         50,
 			Eip1559Elasticity:          6,
+			ForceReplay:                true,
+			ForceReplayController:      addrFor(devkeys.ForceReplayControllerRole.Key(l2ChainIDBig)),
 			Roles: state.ChainRoles{
 				L1ProxyAdminOwner: addrFor(devkeys.L1ProxyAdminOwnerRole.Key(l2ChainIDBig)),
 				L2ProxyAdminOwner: addrFor(devkeys.L2ProxyAdminOwnerRole.Key(l2ChainIDBig)),
