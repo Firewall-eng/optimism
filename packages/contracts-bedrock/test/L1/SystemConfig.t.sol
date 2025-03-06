@@ -320,9 +320,6 @@ contract SystemConfig_Init_CustomGasToken is SystemConfig_Init {
     ERC20 token;
 
     function setUp() public override {
-        token = new ERC20("Silly", "SIL");
-        super.enableCustomGasToken(address(token));
-
         super.setUp();
     }
 
@@ -355,33 +352,26 @@ contract SystemConfig_Init_CustomGasToken is SystemConfig_Init {
     }
 
     /// @dev Tests that initialization sets the correct values and getters work.
-    function test_initialize_customGasToken_succeeds() external view {
+    function test_default_ether_succeeds() external view {
         (address addr, uint8 decimals) = systemConfig.gasPayingToken();
-        assertEq(addr, address(token));
+        assertEq(addr, address(Constants.ETHER));
         assertEq(decimals, 18);
 
-        assertEq(systemConfig.gasPayingTokenName(), token.name());
-        assertEq(systemConfig.gasPayingTokenSymbol(), token.symbol());
+        assertEq(systemConfig.gasPayingTokenName(), "Ether");
+        assertEq(systemConfig.gasPayingTokenSymbol(), "ETH");
     }
 
-    /// @dev Tests that initialization sets the correct values and getters work.
-    function testFuzz_initialize_customGasToken_succeeds(
+    /// @dev Tests that initialization to custom gas tokens other than ether fails.
+    function testFuzz_initialize_customGasToken_only_ether_succeeds(
         address _token,
         string calldata _name,
         string calldata _symbol
     )
         external
     {
-        // don't use vm's address
-        vm.assume(_token != address(vm));
-        // don't use console's address
-        vm.assume(_token != CONSOLE);
-        // don't use create2 deployer's address
-        vm.assume(_token != CREATE2_FACTORY);
-        // don't use default test's address
-        vm.assume(_token != DEFAULT_TEST_CONTRACT);
-        // don't use multicall3's address
-        vm.assume(_token != MULTICALL3_ADDRESS);
+        // don't use ether or the zero address since they will not revert
+        vm.assume(_token != Constants.ETHER);
+        vm.assume(_token != address(0));
 
         vm.assume(bytes(_name).length <= 32);
         vm.assume(bytes(_symbol).length <= 32);
@@ -390,20 +380,16 @@ contract SystemConfig_Init_CustomGasToken is SystemConfig_Init {
         vm.mockCall(_token, abi.encodeCall(token.name, ()), abi.encode(_name));
         vm.mockCall(_token, abi.encodeCall(token.symbol, ()), abi.encode(_symbol));
 
+        vm.expectRevert();
         cleanStorageAndInit(_token);
 
         (address addr, uint8 decimals) = systemConfig.gasPayingToken();
+        assertEq(addr, Constants.ETHER);
         assertEq(decimals, 18);
 
-        if (_token == address(0) || _token == Constants.ETHER) {
-            assertEq(addr, Constants.ETHER);
-            assertEq(systemConfig.gasPayingTokenName(), "Ether");
-            assertEq(systemConfig.gasPayingTokenSymbol(), "ETH");
-        } else {
-            assertEq(addr, _token);
-            assertEq(systemConfig.gasPayingTokenName(), _name);
-            assertEq(systemConfig.gasPayingTokenSymbol(), _symbol);
-        }
+        assertEq(systemConfig.isCustomGasToken(), false);
+        assertEq(systemConfig.gasPayingTokenName(), "Ether");
+        assertEq(systemConfig.gasPayingTokenSymbol(), "ETH");
     }
 
     /// @dev Tests that initialization sets the correct values and getters work when token address passed is 0.
@@ -428,60 +414,6 @@ contract SystemConfig_Init_CustomGasToken is SystemConfig_Init {
 
         assertEq(systemConfig.gasPayingTokenName(), "Ether");
         assertEq(systemConfig.gasPayingTokenSymbol(), "ETH");
-    }
-
-    /// @dev Tests that initialization fails if decimals are not 18.
-    function test_initialize_customGasToken_wrongDecimals_fails() external {
-        vm.mockCall(address(token), abi.encodeCall(token.decimals, ()), abi.encode(8));
-        vm.expectRevert("SystemConfig: bad decimals of gas paying token");
-
-        cleanStorageAndInit(address(token));
-    }
-
-    /// @dev Tests that initialization fails if name is too long.
-    function test_initialize_customGasToken_nameTooLong_fails() external {
-        string memory name = new string(32);
-        name = string.concat(name, "a");
-
-        vm.mockCall(address(token), abi.encodeCall(token.name, ()), abi.encode(name));
-        vm.expectRevert("GasPayingToken: string cannot be greater than 32 bytes");
-
-        cleanStorageAndInit(address(token));
-    }
-
-    /// @dev Tests that initialization fails if symbol is too long.
-    function test_initialize_customGasToken_symbolTooLong_fails() external {
-        string memory symbol = new string(33);
-        symbol = string.concat(symbol, "a");
-
-        vm.mockCall(address(token), abi.encodeCall(token.symbol, ()), abi.encode(symbol));
-        vm.expectRevert("GasPayingToken: string cannot be greater than 32 bytes");
-
-        cleanStorageAndInit(address(token));
-    }
-
-    /// @dev Tests that initialization works with OptimismPortal.
-    function test_initialize_customGasTokenCall_succeeds() external {
-        vm.expectCall(
-            address(optimismPortal),
-            abi.encodeCall(optimismPortal.setGasPayingToken, (address(token), 18, bytes32("Silly"), bytes32("SIL")))
-        );
-
-        vm.expectEmit(address(optimismPortal));
-        emit TransactionDeposited(
-            0xDeaDDEaDDeAdDeAdDEAdDEaddeAddEAdDEAd0001,
-            Predeploys.L1_BLOCK_ATTRIBUTES,
-            0, // deposit version
-            abi.encodePacked(
-                uint256(0), // mint
-                uint256(0), // value
-                uint64(200_000), // gasLimit
-                false, // isCreation,
-                abi.encodeCall(IL1Block.setGasPayingToken, (address(token), 18, bytes32("Silly"), bytes32("SIL")))
-            )
-        );
-
-        cleanStorageAndInit(address(token));
     }
 }
 
