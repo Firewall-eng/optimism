@@ -15,12 +15,9 @@ interface IOptimismPortal {
     error InvalidDataRemainder();
     error InvalidHeader();
     error LargeCalldata();
-    error NoValue();
     error NonReentrant();
-    error OnlyCustomGasToken();
     error OutOfGas();
     error SmallGasLimit();
-    error TransferFailed();
     error Unauthorized();
     error UnexpectedList();
     error UnexpectedString();
@@ -32,16 +29,6 @@ interface IOptimismPortal {
 
     receive() external payable;
 
-    function balance() external view returns (uint256);
-    function depositERC20Transaction(
-        address _to,
-        uint256 _mint,
-        uint256 _value,
-        uint64 _gasLimit,
-        bool _isCreation,
-        bytes memory _data
-    )
-        external;
     function depositTransaction(
         address _to,
         uint256 _value,
@@ -79,7 +66,6 @@ interface IOptimismPortal {
         view
         returns (bytes32 outputRoot, uint128 timestamp, uint128 l2OutputIndex); // nosemgrep
     function setForceReplay(bool _forceReplay) external;
-    function setGasPayingToken(address _token, uint8 _decimals, bytes32 _name, bytes32 _symbol) external;
     function superchainConfig() external view returns (ISuperchainConfig);
     function systemConfig() external view returns (ISystemConfig);
     function version() external pure returns (string memory);

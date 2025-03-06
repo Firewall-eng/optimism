@@ -110,6 +110,32 @@
   },
   {
     "inputs": [],
+    "name": "RELAY_MESSAGE_FORCE_REPLAY_CONFIG_CALL_GAS",
+    "outputs": [
+      {
+        "internalType": "uint64",
+        "name": "",
+        "type": "uint64"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [],
+    "name": "RELAY_MESSAGE_FORCE_REPLAY_CONFIG_NOOP_GAS",
+    "outputs": [
+      {
+        "internalType": "uint64",
+        "name": "",
+        "type": "uint64"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [],
     "name": "RELAY_RESERVED_GAS",
     "outputs": [
       {

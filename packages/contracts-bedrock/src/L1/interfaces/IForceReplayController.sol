@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: UNLICENSED
-pragma solidity 0.8.15;
+pragma solidity ^0.8.0;
 
 /// @title Contract to allow for bypassing of force replay enforcement.
 interface IForceReplayController {

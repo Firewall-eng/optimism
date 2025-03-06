@@ -10,11 +10,10 @@ import { Preinstalls } from "src/libraries/Preinstalls.sol";
 
 // Interfaces
 import { ISemver } from "src/universal/interfaces/ISemver.sol";
-import { IL1Block } from "src/L2/interfaces/IL1Block.sol";
 import { IETHLiquidity } from "src/L2/interfaces/IETHLiquidity.sol";
 import { IERC7802, IERC165 } from "src/L2/interfaces/IERC7802.sol";
 import { IERC20 } from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
-import { Unauthorized, NotCustomGasToken } from "src/libraries/errors/CommonErrors.sol";
+import { Unauthorized } from "src/libraries/errors/CommonErrors.sol";
 
 /// @custom:proxied true
 /// @custom:predeploy 0x4200000000000000000000000000000000000024
@@ -26,18 +25,6 @@ contract SuperchainWETH is WETH98, IERC7802, ISemver {
     /// @notice Semantic version.
     /// @custom:semver 1.0.0-beta.10
     string public constant version = "1.0.0-beta.10";
-
-    /// @inheritdoc WETH98
-    function deposit() public payable override {
-        if (IL1Block(Predeploys.L1_BLOCK_ATTRIBUTES).isCustomGasToken()) revert NotCustomGasToken();
-        super.deposit();
-    }
-
-    /// @inheritdoc WETH98
-    function withdraw(uint256 _amount) public override {
-        if (IL1Block(Predeploys.L1_BLOCK_ATTRIBUTES).isCustomGasToken()) revert NotCustomGasToken();
-        super.withdraw(_amount);
-    }
 
     /// @inheritdoc WETH98
     function allowance(address owner, address spender) public view override returns (uint256) {
@@ -70,9 +57,7 @@ contract SuperchainWETH is WETH98, IERC7802, ISemver {
         _mint(_to, _amount);
 
         // Mint from ETHLiquidity contract.
-        if (!IL1Block(Predeploys.L1_BLOCK_ATTRIBUTES).isCustomGasToken()) {
-            IETHLiquidity(Predeploys.ETH_LIQUIDITY).mint(_amount);
-        }
+        IETHLiquidity(Predeploys.ETH_LIQUIDITY).mint(_amount);
 
         emit CrosschainMint(_to, _amount);
     }
@@ -86,9 +71,7 @@ contract SuperchainWETH is WETH98, IERC7802, ISemver {
         _burn(_from, _amount);
 
         // Burn to ETHLiquidity contract.
-        if (!IL1Block(Predeploys.L1_BLOCK_ATTRIBUTES).isCustomGasToken()) {
-            IETHLiquidity(Predeploys.ETH_LIQUIDITY).burn{ value: _amount }();
-        }
+        IETHLiquidity(Predeploys.ETH_LIQUIDITY).burn{ value: _amount }();
 
         emit CrosschainBurn(_from, _amount);
     }

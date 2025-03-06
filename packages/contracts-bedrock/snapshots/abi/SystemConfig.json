@@ -188,6 +188,24 @@
   },
   {
     "inputs": [],
+    "name": "crossDomainMessengers",
+    "outputs": [
+      {
+        "internalType": "address",
+        "name": "l1Messenger_",
+        "type": "address"
+      },
+      {
+        "internalType": "address",
+        "name": "l2Messenger_",
+        "type": "address"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [],
     "name": "disputeGameFactory",
     "outputs": [
       {
@@ -227,56 +245,25 @@
   },
   {
     "inputs": [],
+    "name": "forceReplayController",
+    "outputs": [
+      {
+        "internalType": "address",
+        "name": "",
+        "type": "address"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [],
     "name": "gasLimit",
     "outputs": [
       {
         "internalType": "uint64",
         "name": "",
         "type": "uint64"
-      }
-    ],
-    "stateMutability": "view",
-    "type": "function"
-  },
-  {
-    "inputs": [],
-    "name": "gasPayingToken",
-    "outputs": [
-      {
-        "internalType": "address",
-        "name": "addr_",
-        "type": "address"
-      },
-      {
-        "internalType": "uint8",
-        "name": "decimals_",
-        "type": "uint8"
-      }
-    ],
-    "stateMutability": "view",
-    "type": "function"
-  },
-  {
-    "inputs": [],
-    "name": "gasPayingTokenName",
-    "outputs": [
-      {
-        "internalType": "string",
-        "name": "name_",
-        "type": "string"
-      }
-    ],
-    "stateMutability": "view",
-    "type": "function"
-  },
-  {
-    "inputs": [],
-    "name": "gasPayingTokenSymbol",
-    "outputs": [
-      {
-        "internalType": "string",
-        "name": "symbol_",
-        "type": "string"
       }
     ],
     "stateMutability": "view",
@@ -387,11 +374,6 @@
             "internalType": "address",
             "name": "optimismMintableERC20Factory",
             "type": "address"
-          },
-          {
-            "internalType": "address",
-            "name": "gasPayingToken",
-            "type": "address"
           }
         ],
         "internalType": "struct SystemConfig.Addresses",
@@ -406,7 +388,7 @@
   },
   {
     "inputs": [],
-    "name": "isCustomGasToken",
+    "name": "isForcingReplay",
     "outputs": [
       {
         "internalType": "bool",
@@ -626,6 +608,32 @@
       }
     ],
     "name": "setEIP1559Params",
+    "outputs": [],
+    "stateMutability": "nonpayable",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "bool",
+        "name": "_forceReplay",
+        "type": "bool"
+      }
+    ],
+    "name": "setForceReplay",
+    "outputs": [],
+    "stateMutability": "nonpayable",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "address",
+        "name": "_forceReplayController",
+        "type": "address"
+      }
+    ],
+    "name": "setForceReplayController",
     "outputs": [],
     "stateMutability": "nonpayable",
     "type": "function"

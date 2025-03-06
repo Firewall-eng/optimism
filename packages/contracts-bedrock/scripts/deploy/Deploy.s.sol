@@ -301,12 +301,6 @@ contract Deploy is Deployer {
             initializeOptimismPortal();
         }
 
-        if (cfg.useCustomGasToken()) {
-            // Reset the systemconfig then reinitialize it with the custom gas token
-            resetInitializedProxy("SystemConfig");
-            initializeSystemConfig();
-        }
-
         if (cfg.useAltDA()) {
             bytes32 typeHash = keccak256(bytes(cfg.daCommitmentType()));
             bytes32 keccakHash = keccak256(bytes("KeccakCommitment"));
@@ -811,11 +805,6 @@ contract Deploy is Deployer {
 
         bytes32 batcherHash = bytes32(uint256(uint160(cfg.batchSenderAddress())));
 
-        address customGasTokenAddress = Constants.ETHER;
-        if (cfg.useCustomGasToken()) {
-            customGasTokenAddress = cfg.customGasTokenAddress();
-        }
-
         IProxyAdmin proxyAdmin = IProxyAdmin(payable(mustGetAddress("ProxyAdmin")));
         proxyAdmin.upgradeAndCall({
             _proxy: payable(systemConfigProxy),
@@ -837,8 +826,7 @@ contract Deploy is Deployer {
                         l1StandardBridge: mustGetAddress("L1StandardBridgeProxy"),
                         disputeGameFactory: mustGetAddress("DisputeGameFactoryProxy"),
                         optimismPortal: mustGetAddress("OptimismPortalProxy"),
-                        optimismMintableERC20Factory: mustGetAddress("OptimismMintableERC20FactoryProxy"),
-                        gasPayingToken: customGasTokenAddress
+                        optimismMintableERC20Factory: mustGetAddress("OptimismMintableERC20FactoryProxy")
                     })
                 )
             )

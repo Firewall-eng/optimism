@@ -16,41 +16,6 @@ contract StaticConfig_Test is Test {
         vm.label(address(ffi), "FFIInterface");
     }
 
-    /// @dev Tests set gas paying token encoding.
-    function testDiff_encodeSetGasPayingToken_succeeds(
-        address _token,
-        uint8 _decimals,
-        bytes32 _name,
-        bytes32 _symbol
-    )
-        external
-    {
-        bytes memory encoding = StaticConfig.encodeSetGasPayingToken(_token, _decimals, _name, _symbol);
-
-        bytes memory _encoding = ffi.encodeGasPayingToken(_token, _decimals, _name, _symbol);
-
-        assertEq(encoding, _encoding);
-    }
-
-    /// @dev Tests set gas paying token decoding.
-    function test_decodeSetGasPayingToken_succeeds(
-        address _token,
-        uint8 _decimals,
-        bytes32 _name,
-        bytes32 _symbol
-    )
-        external
-    {
-        bytes memory encoding = ffi.encodeGasPayingToken(_token, _decimals, _name, _symbol);
-
-        (address token, uint8 decimals, bytes32 name, bytes32 symbol) = StaticConfig.decodeSetGasPayingToken(encoding);
-
-        assertEq(token, _token);
-        assertEq(decimals, _decimals);
-        assertEq(name, _name);
-        assertEq(symbol, _symbol);
-    }
-
     /// @dev Tests add dependency encoding.
     function testDiff_encodeAddDependency_succeeds(uint256 _chainId) external {
         bytes memory encoding = StaticConfig.encodeAddDependency(_chainId);

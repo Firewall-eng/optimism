@@ -3,7 +3,6 @@ pragma solidity 0.8.15;
 
 import { ISemver } from "src/universal/interfaces/ISemver.sol";
 import { Constants } from "src/libraries/Constants.sol";
-import { GasPayingToken, IGasToken } from "src/libraries/GasPayingToken.sol";
 import { ForceReplay, IForceReplayConfig } from "src/libraries/ForceReplay.sol";
 import { NotDepositor } from "src/libraries/L1BlockErrors.sol";
 
@@ -14,10 +13,7 @@ import { NotDepositor } from "src/libraries/L1BlockErrors.sol";
 ///         Values within this contract are updated once per epoch (every L1 block) and can only be
 ///         set by the "depositor" account, a special system address. Depositor account transactions
 ///         are created by the protocol whenever we move to a new epoch.
-contract L1Block is ISemver, IGasToken, IForceReplayConfig {
-    /// @notice Event emitted when the gas paying token is set.
-    event GasPayingTokenSet(address indexed token, uint8 indexed decimals, bytes32 name, bytes32 symbol);
-
+contract L1Block is ISemver, IForceReplayConfig {
     /// @notice Event emitted when force replay config is updated.
     event ForceReplaySet(bool forceReplay);
 
@@ -67,28 +63,29 @@ contract L1Block is ISemver, IGasToken, IForceReplayConfig {
     }
 
     /// @notice Returns the gas paying token, its decimals, name and symbol.
-    ///         If nothing is set in state, then it means ether is used.
-    function gasPayingToken() public view returns (address addr_, uint8 decimals_) {
-        (addr_, decimals_) = GasPayingToken.getToken();
+    function gasPayingToken() public pure returns (address addr_, uint8 decimals_) {
+        addr_ = Constants.ETHER;
+        decimals_ = 18;
     }
 
     /// @notice Returns the gas paying token name.
     ///         If nothing is set in state, then it means ether is used.
-    function gasPayingTokenName() public view returns (string memory name_) {
-        name_ = GasPayingToken.getName();
+    ///         This function cannot be removed because WETH depends on it.
+    function gasPayingTokenName() public pure returns (string memory name_) {
+        name_ = "Ether";
     }
 
     /// @notice Returns the gas paying token symbol.
     ///         If nothing is set in state, then it means ether is used.
-    function gasPayingTokenSymbol() public view returns (string memory symbol_) {
-        symbol_ = GasPayingToken.getSymbol();
+    ///         This function cannot be removed because WETH depends on it.
+    function gasPayingTokenSymbol() public pure returns (string memory symbol_) {
+        symbol_ = "ETH";
     }
 
     /// @notice Getter for custom gas token paying networks. Returns true if the
     ///         network uses a custom gas token.
-    function isCustomGasToken() public view returns (bool) {
-        (address token,) = gasPayingToken();
-        return token != Constants.ETHER;
+    function isCustomGasToken() public pure returns (bool is_) {
+        is_ = false;
     }
 
     /// @notice Getter for the force replay boolean value. If nothing is in state, then it means
@@ -176,17 +173,6 @@ contract L1Block is ISemver, IGasToken, IForceReplayConfig {
             sstore(hash.slot, calldataload(100)) // bytes32
             sstore(batcherHash.slot, calldataload(132)) // bytes32
         }
-    }
-
-    /// @notice Sets the gas paying token for the L2 system. Can only be called by the special
-    ///         depositor account. This function is not called on every L2 block but instead
-    ///         only called by specially crafted L1 deposit transactions.
-    function setGasPayingToken(address _token, uint8 _decimals, bytes32 _name, bytes32 _symbol) external {
-        if (msg.sender != DEPOSITOR_ACCOUNT()) revert NotDepositor();
-
-        GasPayingToken.set({ _token: _token, _decimals: _decimals, _name: _name, _symbol: _symbol });
-
-        emit GasPayingTokenSet({ token: _token, decimals: _decimals, name: _name, symbol: _symbol });
     }
 
     /// @notice External setter for the force replay boolean value. Can only be called

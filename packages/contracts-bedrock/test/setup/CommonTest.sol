@@ -20,7 +20,6 @@ contract CommonTest is Test, Setup, Events {
 
     bool useAltDAOverride;
     bool useLegacyContracts;
-    address customGasToken;
     bool useInteropOverride;
 
     function setUp() public virtual override {
@@ -38,9 +37,6 @@ contract CommonTest is Test, Setup, Events {
         // We default to fault proofs unless explicitly disabled by useLegacyContracts
         if (!useLegacyContracts) {
             deploy.cfg().setUseFaultProofs(true);
-        }
-        if (customGasToken != address(0)) {
-            deploy.cfg().setUseCustomGasToken(customGasToken);
         }
         if (useInteropOverride) {
             deploy.cfg().setUseInterop(true);
@@ -128,17 +124,6 @@ contract CommonTest is Test, Setup, Events {
         }
 
         useAltDAOverride = true;
-    }
-
-    function enableCustomGasToken(address _token) public {
-        // Check if the system has already been deployed, based off of the heuristic that alice and bob have not been
-        // set by the `setUp` function yet.
-        if (!(alice == address(0) && bob == address(0))) {
-            revert("CommonTest: Cannot enable custom gas token after deployment. Consider overriding `setUp`.");
-        }
-        require(_token != Constants.ETHER);
-
-        customGasToken = _token;
     }
 
     function enableInterop() public {

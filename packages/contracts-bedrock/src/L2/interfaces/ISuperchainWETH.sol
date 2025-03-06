@@ -7,10 +7,9 @@ import { ISemver } from "src/universal/interfaces/ISemver.sol";
 
 interface ISuperchainWETH is IWETH98, IERC7802, ISemver {
     error Unauthorized();
-    error NotCustomGasToken();
 
     function balanceOf(address src) external view returns (uint256);
-    function withdraw(uint256 _amount) external;
+    function withdraw(uint256 wad) external;
     function supportsInterface(bytes4 _interfaceId) external view returns (bool);
 
     function __constructor__() external;

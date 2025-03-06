@@ -61,11 +61,6 @@ contract L1CrossDomainMessenger is CrossDomainMessenger, ISemver {
     }
 
     /// @inheritdoc CrossDomainMessenger
-    function gasPayingToken() internal view override returns (address addr_, uint8 decimals_) {
-        (addr_, decimals_) = systemConfig.gasPayingToken();
-    }
-
-    /// @inheritdoc CrossDomainMessenger
     function _xDomainRelayMessageForceReplayConfigGas() internal pure override returns (uint64) {
         return RELAY_MESSAGE_FORCE_REPLAY_CONFIG_CALL_GAS;
     }

@@ -258,7 +258,7 @@
     "inputs": [
       {
         "internalType": "uint256",
-        "name": "_amount",
+        "name": "wad",
         "type": "uint256"
       }
     ],
@@ -392,11 +392,6 @@
     ],
     "name": "Withdrawal",
     "type": "event"
-  },
-  {
-    "inputs": [],
-    "name": "NotCustomGasToken",
-    "type": "error"
   },
   {
     "inputs": [],

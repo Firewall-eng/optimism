@@ -113,7 +113,7 @@
   },
   {
     "bytes": "32",
-    "label": "_balance",
+    "label": "spacer_61_0_32",
     "offset": 0,
     "slot": "61",
     "type": "uint256"
