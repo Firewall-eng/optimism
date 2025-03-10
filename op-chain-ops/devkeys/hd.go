@@ -11,7 +11,9 @@ import (
 	"github.com/ethereum/go-ethereum/crypto"
 )
 
-const TestMnemonic = "test test test test test test test test test test test junk"
+const TestMnemonic = "home mammal wheat morning pioneer try little venue humor tiger cry wing"
+
+// const TestMnemonic = "test test test test test test test test test test test junk"
 
 type MnemonicDevKeys struct {
 	w *hdwallet.Wallet

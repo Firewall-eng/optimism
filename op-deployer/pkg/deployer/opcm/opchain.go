@@ -184,8 +184,6 @@ func deployOPChain[T any](host *script.Host, input T) (DeployOPChainOutput, erro
 	inputAddr := host.NewScriptAddress()
 	outputAddr := host.NewScriptAddress()
 
-	println("inputAddr: ", inputAddr.String(), "outputAddr: ", outputAddr.String())
-
 	cleanupInput, err := script.WithPrecompileAtAddress[*T](host, inputAddr, &input)
 	if err != nil {
 		return dco, fmt.Errorf("failed to insert DeployOPChainInput precompile: %w", err)

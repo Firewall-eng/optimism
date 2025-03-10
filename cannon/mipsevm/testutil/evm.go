@@ -60,7 +60,6 @@ func TestContractsSetup(t require.TestingT, version MipsVersion) *ContractMetada
 
 // loadArtifacts loads the Cannon contracts, from the contracts package.
 func loadArtifacts(version MipsVersion) (*Artifacts, error) {
-	println("are we loading the artifacts like this? seriously?")
 	artifactFS := foundry.OpenArtifactsDir("../../../packages/contracts-bedrock/forge-artifacts")
 	var mips *foundry.Artifact
 	var err error
