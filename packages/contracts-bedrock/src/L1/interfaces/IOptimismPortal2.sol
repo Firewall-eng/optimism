@@ -108,6 +108,7 @@ interface IOptimismPortal2 {
         returns (IDisputeGame disputeGameProxy, uint64 timestamp); // nosemgrep
     function respectedGameType() external view returns (GameType);
     function respectedGameTypeUpdatedAt() external view returns (uint64);
+    function setForceReplay(bool _forceReplay) external;
     function setGasPayingToken(address _token, uint8 _decimals, bytes32 _name, bytes32 _symbol) external;
     function setRespectedGameType(GameType _gameType) external;
     function superchainConfig() external view returns (ISuperchainConfig);

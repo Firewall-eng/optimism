@@ -11,6 +11,7 @@ import { ERC20 } from "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 import { Constants } from "src/libraries/Constants.sol";
 import { Predeploys } from "src/libraries/Predeploys.sol";
 import { GasPayingToken } from "src/libraries/GasPayingToken.sol";
+import { ForceReplay } from "src/libraries/ForceReplay.sol";
 
 // Interfaces
 import { IResourceMetering } from "src/L1/interfaces/IResourceMetering.sol";
@@ -76,6 +77,11 @@ contract SystemConfig_Initialize_Test is SystemConfig_Init {
         (address token, uint8 decimals) = impl.gasPayingToken();
         assertEq(token, Constants.ETHER);
         assertEq(decimals, 18);
+        // Check force replay & controller
+        bool forceReplay = impl.isForcingReplay();
+        address forceReplayController = impl.forceReplayController();
+        assertEq(forceReplay, false);
+        assertEq(forceReplayController, address(0));
     }
 
     /// @dev Tests that initialization sets the correct values.
@@ -112,6 +118,11 @@ contract SystemConfig_Initialize_Test is SystemConfig_Init {
         (address token, uint8 decimals) = systemConfig.gasPayingToken();
         assertEq(token, Constants.ETHER);
         assertEq(decimals, 18);
+        // Check force replay & controller
+        bool forceReplay = systemConfig.isForcingReplay();
+        address forceReplayController = systemConfig.forceReplayController();
+        assertEq(forceReplay, false);
+        assertEq(forceReplayController, address(0));
     }
 }
 
@@ -309,9 +320,6 @@ contract SystemConfig_Init_CustomGasToken is SystemConfig_Init {
     ERC20 token;
 
     function setUp() public override {
-        token = new ERC20("Silly", "SIL");
-        super.enableCustomGasToken(address(token));
-
         super.setUp();
     }
 
@@ -344,33 +352,26 @@ contract SystemConfig_Init_CustomGasToken is SystemConfig_Init {
     }
 
     /// @dev Tests that initialization sets the correct values and getters work.
-    function test_initialize_customGasToken_succeeds() external view {
+    function test_default_ether_succeeds() external view {
         (address addr, uint8 decimals) = systemConfig.gasPayingToken();
-        assertEq(addr, address(token));
+        assertEq(addr, address(Constants.ETHER));
         assertEq(decimals, 18);
 
-        assertEq(systemConfig.gasPayingTokenName(), token.name());
-        assertEq(systemConfig.gasPayingTokenSymbol(), token.symbol());
+        assertEq(systemConfig.gasPayingTokenName(), "Ether");
+        assertEq(systemConfig.gasPayingTokenSymbol(), "ETH");
     }
 
-    /// @dev Tests that initialization sets the correct values and getters work.
-    function testFuzz_initialize_customGasToken_succeeds(
+    /// @dev Tests that initialization to custom gas tokens other than ether fails.
+    function testFuzz_initialize_customGasToken_only_ether_succeeds(
         address _token,
         string calldata _name,
         string calldata _symbol
     )
         external
     {
-        // don't use vm's address
-        vm.assume(_token != address(vm));
-        // don't use console's address
-        vm.assume(_token != CONSOLE);
-        // don't use create2 deployer's address
-        vm.assume(_token != CREATE2_FACTORY);
-        // don't use default test's address
-        vm.assume(_token != DEFAULT_TEST_CONTRACT);
-        // don't use multicall3's address
-        vm.assume(_token != MULTICALL3_ADDRESS);
+        // don't use ether or the zero address since they will not revert
+        vm.assume(_token != Constants.ETHER);
+        vm.assume(_token != address(0));
 
         vm.assume(bytes(_name).length <= 32);
         vm.assume(bytes(_symbol).length <= 32);
@@ -379,20 +380,16 @@ contract SystemConfig_Init_CustomGasToken is SystemConfig_Init {
         vm.mockCall(_token, abi.encodeCall(token.name, ()), abi.encode(_name));
         vm.mockCall(_token, abi.encodeCall(token.symbol, ()), abi.encode(_symbol));
 
+        vm.expectRevert();
         cleanStorageAndInit(_token);
 
         (address addr, uint8 decimals) = systemConfig.gasPayingToken();
+        assertEq(addr, Constants.ETHER);
         assertEq(decimals, 18);
 
-        if (_token == address(0) || _token == Constants.ETHER) {
-            assertEq(addr, Constants.ETHER);
-            assertEq(systemConfig.gasPayingTokenName(), "Ether");
-            assertEq(systemConfig.gasPayingTokenSymbol(), "ETH");
-        } else {
-            assertEq(addr, _token);
-            assertEq(systemConfig.gasPayingTokenName(), _name);
-            assertEq(systemConfig.gasPayingTokenSymbol(), _symbol);
-        }
+        assertEq(systemConfig.isCustomGasToken(), false);
+        assertEq(systemConfig.gasPayingTokenName(), "Ether");
+        assertEq(systemConfig.gasPayingTokenSymbol(), "ETH");
     }
 
     /// @dev Tests that initialization sets the correct values and getters work when token address passed is 0.
@@ -418,43 +415,21 @@ contract SystemConfig_Init_CustomGasToken is SystemConfig_Init {
         assertEq(systemConfig.gasPayingTokenName(), "Ether");
         assertEq(systemConfig.gasPayingTokenSymbol(), "ETH");
     }
+}
 
-    /// @dev Tests that initialization fails if decimals are not 18.
-    function test_initialize_customGasToken_wrongDecimals_fails() external {
-        vm.mockCall(address(token), abi.encodeCall(token.decimals, ()), abi.encode(8));
-        vm.expectRevert("SystemConfig: bad decimals of gas paying token");
+contract SystemConfig_Init_ForceReplay is SystemConfig_Init {
+    /// @dev Tests that the default values are correct and getters work.
+    function test_initialize_forceReplay_succeeds() external view {
+        bool forceReplay = systemConfig.isForcingReplay();
+        assertEq(forceReplay, false);
 
-        cleanStorageAndInit(address(token));
+        address forceReplayController = systemConfig.forceReplayController();
+        assertEq(forceReplayController, address(0));
     }
 
-    /// @dev Tests that initialization fails if name is too long.
-    function test_initialize_customGasToken_nameTooLong_fails() external {
-        string memory name = new string(32);
-        name = string.concat(name, "a");
-
-        vm.mockCall(address(token), abi.encodeCall(token.name, ()), abi.encode(name));
-        vm.expectRevert("GasPayingToken: string cannot be greater than 32 bytes");
-
-        cleanStorageAndInit(address(token));
-    }
-
-    /// @dev Tests that initialization fails if symbol is too long.
-    function test_initialize_customGasToken_symbolTooLong_fails() external {
-        string memory symbol = new string(33);
-        symbol = string.concat(symbol, "a");
-
-        vm.mockCall(address(token), abi.encodeCall(token.symbol, ()), abi.encode(symbol));
-        vm.expectRevert("GasPayingToken: string cannot be greater than 32 bytes");
-
-        cleanStorageAndInit(address(token));
-    }
-
-    /// @dev Tests that initialization works with OptimismPortal.
-    function test_initialize_customGasTokenCall_succeeds() external {
-        vm.expectCall(
-            address(optimismPortal),
-            abi.encodeCall(optimismPortal.setGasPayingToken, (address(token), 18, bytes32("Silly"), bytes32("SIL")))
-        );
+    /// @dev Tests that initialization works for forceReplay with OptimismPortal.
+    function test_setForceReplay_forceReplay_succeeds() external {
+        vm.expectCall(address(optimismPortal), abi.encodeCall(optimismPortal.setForceReplay, (true)));
 
         vm.expectEmit(address(optimismPortal));
         emit TransactionDeposited(
@@ -466,11 +441,35 @@ contract SystemConfig_Init_CustomGasToken is SystemConfig_Init {
                 uint256(0), // value
                 uint64(200_000), // gasLimit
                 false, // isCreation,
-                abi.encodeCall(IL1Block.setGasPayingToken, (address(token), 18, bytes32("Silly"), bytes32("SIL")))
+                abi.encodeCall(IL1Block.setForceReplay, (true))
             )
         );
 
-        cleanStorageAndInit(address(token));
+        vm.prank(systemConfig.owner());
+        systemConfig.setForceReplay(true);
+
+        bool forceReplay = systemConfig.isForcingReplay();
+        assertEq(forceReplay, true);
+
+        address forceReplayController = systemConfig.forceReplayController();
+        assertEq(forceReplayController, address(0));
+    }
+
+    /// @dev Tests that the config update event is emitted for forceReplayController
+    function test_setForceReplayController_forceReplay_succeeds() external {
+        address newController = address(100);
+
+        vm.expectEmit(address(systemConfig));
+        emit ConfigUpdate(0, ISystemConfig.UpdateType.FORCE_REPLAY_CONTROLLER, abi.encode(newController));
+
+        vm.prank(systemConfig.owner());
+        systemConfig.setForceReplayController(newController);
+
+        address forceReplayController = systemConfig.forceReplayController();
+        assertEq(forceReplayController, newController);
+
+        bool forceReplay = systemConfig.isForcingReplay();
+        assertEq(forceReplay, false);
     }
 }
 

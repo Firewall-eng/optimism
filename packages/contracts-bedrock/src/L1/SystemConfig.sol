@@ -9,6 +9,7 @@ import { ERC20 } from "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 import { Storage } from "src/libraries/Storage.sol";
 import { Constants } from "src/libraries/Constants.sol";
 import { GasPayingToken, IGasToken } from "src/libraries/GasPayingToken.sol";
+import { ForceReplay, IForceReplayConfig, IOtherMessenger } from "src/libraries/ForceReplay.sol";
 
 // Interfaces
 import { ISemver } from "src/universal/interfaces/ISemver.sol";
@@ -20,19 +21,22 @@ import { IResourceMetering } from "src/L1/interfaces/IResourceMetering.sol";
 /// @notice The SystemConfig contract is used to manage configuration of an Optimism network.
 ///         All configuration is stored on L1 and picked up by L2 as part of the derviation of
 ///         the L2 chain.
-contract SystemConfig is OwnableUpgradeable, ISemver, IGasToken {
+contract SystemConfig is OwnableUpgradeable, ISemver, IGasToken, IForceReplayConfig {
     /// @notice Enum representing different types of updates.
     /// @custom:value BATCHER              Represents an update to the batcher hash.
     /// @custom:value FEE_SCALARS          Represents an update to l1 data fee scalars.
     /// @custom:value GAS_LIMIT            Represents an update to gas limit on L2.
     /// @custom:value UNSAFE_BLOCK_SIGNER  Represents an update to the signer key for unsafe
     ///                                    block distrubution.
+    /// @custom:value FORCE_REPLAY_CONTROLLER Represents an update to the force replay
+    ///                                       controller.
     enum UpdateType {
         BATCHER,
         FEE_SCALARS,
         GAS_LIMIT,
         UNSAFE_BLOCK_SIGNER,
-        EIP_1559_PARAMS
+        EIP_1559_PARAMS,
+        FORCE_REPLAY_CONTROLLER
     }
 
     /// @notice Struct representing the addresses of L1 system contracts. These should be the
@@ -313,6 +317,53 @@ contract SystemConfig is OwnableUpgradeable, ISemver, IGasToken {
     /// @notice Getter for the gas paying token symbol.
     function gasPayingTokenSymbol() external view returns (string memory symbol_) {
         symbol_ = GasPayingToken.getSymbol();
+    }
+
+    /// @notice Getter for the L1CrossDomainMessenger and the L2CrossDomainMessenger addresses.
+    function crossDomainMessengers() public view returns (address l1Messenger_, address l2Messenger_) {
+        l1Messenger_ = Storage.getAddress(L1_CROSS_DOMAIN_MESSENGER_SLOT);
+        l2Messenger_ = IOtherMessenger(l1Messenger_).otherMessenger();
+    }
+
+    /// @notice Getter for the force replay boolean value.
+    function isForcingReplay() public view returns (bool) {
+        return ForceReplay.getForceReplay();
+    }
+
+    /// @notice Getter for the force replay controller address value.
+    function forceReplayController() public view returns (address) {
+        return ForceReplay.getForceReplayController();
+    }
+
+    /// @notice External setter for the force replay boolean value. Can only be called
+    ///         by the owner or fault prover if being turned off.
+    /// @param _forceReplay Boolean value for the force replay configuration.
+    function setForceReplay(bool _forceReplay) external onlyOwner {
+        _setForceReplay(_forceReplay);
+    }
+
+    /// @notice Internal setter for the force replay boolean value.
+    /// @param _forceReplay Boolean value for the force replay configuration.
+    function _setForceReplay(bool _forceReplay) internal virtual {
+        if (ForceReplay.getForceReplay() != _forceReplay) {
+            // Set the force replay in storage and in the OptimismPortal.
+            ForceReplay.setForceReplay(_forceReplay);
+            IOptimismPortal(payable(optimismPortal())).setForceReplay(_forceReplay);
+        }
+    }
+
+    /// @notice External setter for the force replay controller address. Can only be called by the owner.
+    /// @param _forceReplayController Address value for the force replay controller.
+    function setForceReplayController(address _forceReplayController) external onlyOwner {
+        _setForceReplayController(_forceReplayController);
+    }
+
+    /// @notice Internal setter for the force replay controller address value.
+    /// @param _forceReplayController Address value for the force replay controller.
+    function _setForceReplayController(address _forceReplayController) internal virtual {
+        ForceReplay.setForceReplayController(_forceReplayController);
+        bytes memory data = abi.encode(_forceReplayController);
+        emit ConfigUpdate(VERSION, UpdateType.FORCE_REPLAY_CONTROLLER, data);
     }
 
     /// @notice Internal setter for the gas paying token address, includes validation.

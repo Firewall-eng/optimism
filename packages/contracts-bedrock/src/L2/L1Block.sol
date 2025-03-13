@@ -4,6 +4,7 @@ pragma solidity 0.8.15;
 import { ISemver } from "src/universal/interfaces/ISemver.sol";
 import { Constants } from "src/libraries/Constants.sol";
 import { GasPayingToken, IGasToken } from "src/libraries/GasPayingToken.sol";
+import { ForceReplay, IForceReplayConfig } from "src/libraries/ForceReplay.sol";
 import { NotDepositor } from "src/libraries/L1BlockErrors.sol";
 
 /// @custom:proxied true
@@ -13,9 +14,12 @@ import { NotDepositor } from "src/libraries/L1BlockErrors.sol";
 ///         Values within this contract are updated once per epoch (every L1 block) and can only be
 ///         set by the "depositor" account, a special system address. Depositor account transactions
 ///         are created by the protocol whenever we move to a new epoch.
-contract L1Block is ISemver, IGasToken {
+contract L1Block is ISemver, IGasToken, IForceReplayConfig {
     /// @notice Event emitted when the gas paying token is set.
     event GasPayingTokenSet(address indexed token, uint8 indexed decimals, bytes32 name, bytes32 symbol);
+
+    /// @notice Event emitted when force replay config is updated.
+    event ForceReplaySet(bool forceReplay);
 
     /// @notice Address of the special depositor account.
     function DEPOSITOR_ACCOUNT() public pure returns (address addr_) {
@@ -85,6 +89,12 @@ contract L1Block is ISemver, IGasToken {
     function isCustomGasToken() public view returns (bool) {
         (address token,) = gasPayingToken();
         return token != Constants.ETHER;
+    }
+
+    /// @notice Getter for the force replay boolean value. If nothing is in state, then it means
+    ///         forcing replay is off.
+    function isForcingReplay() public view returns (bool) {
+        return ForceReplay.getForceReplay();
     }
 
     /// @custom:legacy
@@ -177,5 +187,16 @@ contract L1Block is ISemver, IGasToken {
         GasPayingToken.set({ _token: _token, _decimals: _decimals, _name: _name, _symbol: _symbol });
 
         emit GasPayingTokenSet({ token: _token, decimals: _decimals, name: _name, symbol: _symbol });
+    }
+
+    /// @notice External setter for the force replay boolean value. Can only be called
+    ///         by the system depositor account.
+    /// @param _forceReplay The force replay boolean value to set.
+    function setForceReplay(bool _forceReplay) external {
+        if (msg.sender != DEPOSITOR_ACCOUNT()) revert NotDepositor();
+
+        ForceReplay.setForceReplay(_forceReplay);
+
+        emit ForceReplaySet(_forceReplay);
     }
 }

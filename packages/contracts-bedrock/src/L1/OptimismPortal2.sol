@@ -44,6 +44,7 @@ import { IResourceMetering } from "src/L1/interfaces/IResourceMetering.sol";
 import { ISuperchainConfig } from "src/L1/interfaces/ISuperchainConfig.sol";
 import { IDisputeGameFactory } from "src/dispute/interfaces/IDisputeGameFactory.sol";
 import { IDisputeGame } from "src/dispute/interfaces/IDisputeGame.sol";
+import { IForceReplayController } from "src/L1/interfaces/IForceReplayController.sol";
 import { IL1Block } from "src/L2/interfaces/IL1Block.sol";
 
 /// @custom:proxied true
@@ -236,12 +237,7 @@ contract OptimismPortal2 is Initializable, ResourceMetering, ISemver {
 
     /// @notice Getter for the balance of the contract.
     function balance() public view returns (uint256) {
-        (address token,) = gasPayingToken();
-        if (token == Constants.ETHER) {
-            return address(this).balance;
-        } else {
-            return _balance;
-        }
+        return address(this).balance;
     }
 
     /// @notice Getter function for the address of the guardian.
@@ -295,7 +291,23 @@ contract OptimismPortal2 is Initializable, ResourceMetering, ISemver {
 
     /// @notice Returns the gas paying token and its decimals.
     function gasPayingToken() internal view returns (address addr_, uint8 decimals_) {
-        (addr_, decimals_) = systemConfig.gasPayingToken();
+        addr_ = Constants.ETHER;
+        decimals_ = 18;
+    }
+
+    /// @notice Returns the force replay boolean value.
+    function isForcingReplay() internal view returns (bool) {
+        return systemConfig.isForcingReplay();
+    }
+
+    /// @notice Returns the force replay controller address value.
+    function forceReplayController() internal view returns (address) {
+        return systemConfig.forceReplayController();
+    }
+
+    /// @notice Returns the address of the L1CrossDomainMessenger and the L2CrossDomainMessenger.
+    function crossDomainMessengers() internal view returns (address l1Messenger_, address l2Messenger_) {
+        return systemConfig.crossDomainMessengers();
     }
 
     /// @notice Getter for the resource config.
@@ -497,32 +509,7 @@ contract OptimismPortal2 is Initializable, ResourceMetering, ISemver {
         public
         metered(_gasLimit)
     {
-        // Can only be called if an ERC20 token is used for gas paying on L2
-        (address token,) = gasPayingToken();
-        if (token == Constants.ETHER) revert OnlyCustomGasToken();
-
-        // Gives overflow protection for L2 account balances.
-        _balance += _mint;
-
-        // Get the balance of the portal before the transfer.
-        uint256 startBalance = IERC20(token).balanceOf(address(this));
-
-        // Take ownership of the token. It is assumed that the user has given the portal an approval.
-        IERC20(token).safeTransferFrom({ from: msg.sender, to: address(this), value: _mint });
-
-        // Double check that the portal now has the exact amount of token.
-        if (IERC20(token).balanceOf(address(this)) != startBalance + _mint) {
-            revert TransferFailed();
-        }
-
-        _depositTransaction({
-            _to: _to,
-            _mint: _mint,
-            _value: _value,
-            _gasLimit: _gasLimit,
-            _isCreation: _isCreation,
-            _data: _data
-        });
+        revert OnlyCustomGasToken();
     }
 
     /// @notice Accepts deposits of ETH and data, and emits a TransactionDeposited event for use in
@@ -589,6 +576,20 @@ contract OptimismPortal2 is Initializable, ResourceMetering, ISemver {
         // transactions are not gossipped over the p2p network.
         if (_data.length > 120_000) revert LargeCalldata();
 
+        // Check if we need to enforce forced replay through the cross domain messengers or if the
+        // force replay controller will allow for forced inclusion.
+        if (isForcingReplay() && !(msg.sender == tx.origin && msg.sender == _to)) {
+            (address l1Messenger, address l2Messenger) = crossDomainMessengers();
+            if (msg.sender != l1Messenger || _to != l2Messenger) {
+                address controller = forceReplayController();
+                require(controller != address(0), "OptimismPortal: force replay controller is not set");
+                bool forceInclude = IForceReplayController(controller).forceInclude(
+                    msg.sender, _to, _mint, _value, _gasLimit, _isCreation, _data
+                );
+                require(forceInclude, "OptimismPortal: force replay controller denying force include");
+            }
+        }
+
         // Transform the from-address to its alias if the caller is a contract.
         address from = msg.sender;
         if (msg.sender != tx.origin) {
@@ -605,17 +606,17 @@ contract OptimismPortal2 is Initializable, ResourceMetering, ISemver {
         emit TransactionDeposited(from, _to, DEPOSIT_VERSION, opaqueData);
     }
 
-    /// @notice Sets the gas paying token for the L2 system. This token is used as the
-    ///         L2 native asset. Only the SystemConfig contract can call this function.
-    function setGasPayingToken(address _token, uint8 _decimals, bytes32 _name, bytes32 _symbol) external {
+    /// @notice Sets the force replay value for the L2 system. Only the SystemConfig contract
+    ///         can call this function.
+    function setForceReplay(bool _forceReplay) external {
         if (msg.sender != address(systemConfig)) revert Unauthorized();
 
         // Set L2 deposit gas as used without paying burning gas. Ensures that deposits cannot use too much L2 gas.
-        // This value must be large enough to cover the cost of calling `L1Block.setGasPayingToken`.
+        // This value must be large enough to cover the cost of calling `L1Block.setForceReplay`.
         useGas(SYSTEM_DEPOSIT_GAS_LIMIT);
 
-        // Emit the special deposit transaction directly that sets the gas paying
-        // token in the L1Block predeploy contract.
+        // Emit the special deposit transaction directly that sets the force replay boolean
+        // in the L1Block predeploy contract.
         emit TransactionDeposited(
             Constants.DEPOSITOR_ACCOUNT,
             Predeploys.L1_BLOCK_ATTRIBUTES,
@@ -625,9 +626,15 @@ contract OptimismPortal2 is Initializable, ResourceMetering, ISemver {
                 uint256(0), // value
                 uint64(SYSTEM_DEPOSIT_GAS_LIMIT), // gasLimit
                 false, // isCreation,
-                abi.encodeCall(IL1Block.setGasPayingToken, (_token, _decimals, _name, _symbol))
+                abi.encodeCall(IL1Block.setForceReplay, (_forceReplay))
             )
         );
+    }
+
+    /// @notice Sets the gas paying token for the L2 system. This token is used as the
+    ///         L2 native asset. Only the SystemConfig contract can call this function.
+    function setGasPayingToken(address _token, uint8 _decimals, bytes32 _name, bytes32 _symbol) external {
+        revert Unauthorized();
     }
 
     /// @notice Blacklists a dispute game. Should only be used in the event that a dispute game resolves incorrectly.
